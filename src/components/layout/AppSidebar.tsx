@@ -1,6 +1,7 @@
 import { useState } from "react"
-import { Users, CreditCard, DollarSign, Monitor, LogOut, Menu, Settings } from "lucide-react"
+import { BarChart3, Users, CreditCard, DollarSign, Monitor, LogOut, Menu, Settings } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useAuth } from "@/contexts/AuthContext"
 
 import {
   Sidebar,
@@ -17,17 +18,18 @@ import {
 import { Button } from "@/components/ui/button"
 
 const menuItems = [
+  { title: "Dashboard", url: "/", icon: BarChart3 },
   { title: "Clientes", url: "/clients", icon: Users },
   { title: "Planos", url: "/plans", icon: CreditCard },
   { title: "Financeiro", url: "/financial", icon: DollarSign },
   { title: "Acesso Remoto", url: "/remote-access", icon: Monitor },
-  { title: "Configurações", url: "/settings", icon: Settings },
 ]
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
   const currentPath = location.pathname
+  const { user, signOut } = useAuth()
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -87,7 +89,7 @@ export function AppSidebar() {
         <div className="flex flex-col gap-2">
           {!collapsed && (
             <div className="text-xs text-muted-foreground mb-2">
-              <p>Usuário: Admin</p>
+              <p>Usuário: {user?.email?.split('@')[0]}</p>
               <p>Versão: 1.0.0</p>
             </div>
           )}
@@ -95,10 +97,7 @@ export function AppSidebar() {
             variant="ghost" 
             size="sm" 
             className="justify-start"
-            onClick={() => {
-              // Logout logic here
-              console.log("Logout")
-            }}
+            onClick={signOut}
           >
             <LogOut className="h-4 w-4" />
             {!collapsed && <span className="ml-2">Sair</span>}

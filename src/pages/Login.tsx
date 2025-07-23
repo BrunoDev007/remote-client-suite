@@ -1,11 +1,12 @@
-import { useState } from "react"
-import { Eye, EyeOff, Monitor, ArrowRight, KeyRound } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Eye, EyeOff, Monitor, ArrowRight, KeyRound, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
 
 export default function Login() {
@@ -14,32 +15,43 @@ export default function Login() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    name: "",
     recoveryData: ""
   })
   const navigate = useNavigate()
+  const { signIn, signUp, user } = useAuth()
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (user) {
+      navigate("/")
+    }
+  }, [user, navigate])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false)
-      if (formData.email && formData.password) {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o sistema...",
-        })
-        navigate("/clients")
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro no login",
-          description: "Verifique suas credenciais e tente novamente.",
-        })
-      }
-    }, 1500)
+    const { error } = await signIn(formData.email, formData.password)
+    
+    if (!error) {
+      navigate("/")
+    }
+    
+    setIsLoading(false)
+  }
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    
+    const { error } = await signUp(formData.email, formData.password, formData.name)
+    
+    if (!error) {
+      navigate("/")
+    }
+    
+    setIsLoading(false)
   }
 
   const handleRecovery = async (e: React.FormEvent) => {
@@ -72,14 +84,15 @@ export default function Login() {
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Acesso ao Sistema</CardTitle>
             <CardDescription>
-              Faça login ou recupere sua senha
+              Faça login, cadastre-se ou recupere sua senha
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="recovery">Recuperar Senha</TabsTrigger>
+                <TabsTrigger value="signup">Cadastro</TabsTrigger>
+                <TabsTrigger value="recovery">Recuperar</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -127,6 +140,68 @@ export default function Login() {
                   >
                     {isLoading ? "Entrando..." : "Entrar"}
                     <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="signup">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Seu nome completo"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="h-11"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">E-mail</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="h-11"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Senha</Label>
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Digite sua senha"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="h-11 pr-10"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-11 mt-6" 
+                    disabled={isLoading}
+                    variant="premium"
+                  >
+                    {isLoading ? "Cadastrando..." : "Criar Conta"}
+                    <UserPlus className="ml-2 h-4 w-4" />
                   </Button>
                 </form>
               </TabsContent>
