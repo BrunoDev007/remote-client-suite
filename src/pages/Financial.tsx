@@ -10,21 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
-
-interface FinancialRecord {
-  id: number
-  clientId: number
-  clientName: string
-  planName: string
-  valor: number
-  valorOriginal: number
-  dataVencimento: string
-  dataPagamento?: string
-  status: "quitado" | "pendente" | "atrasado"
-  formaPagamento: string
-  motivoAlteracao?: string
-  observacoes?: string
-}
+import { useFinancial } from "@/hooks/useFinancial"
 
 const statusOptions = [
   { value: "todos", label: "Todos" },
@@ -34,93 +20,37 @@ const statusOptions = [
 ]
 
 export default function Financial() {
-  const [records, setRecords] = useState<FinancialRecord[]>([
-    {
-      id: 1,
-      clientId: 1,
-      clientName: "João Silva",
-      planName: "Básico",
-      valor: 59.90,
-      valorOriginal: 59.90,
-      dataVencimento: "2024-01-25",
-      dataPagamento: "2024-01-24",
-      status: "quitado",
-      formaPagamento: "PIX"
-    },
-    {
-      id: 2,
-      clientId: 2,
-      clientName: "Maria Santos",
-      planName: "Premium",
-      valor: 129.90,
-      valorOriginal: 129.90,
-      dataVencimento: "2024-01-20",
-      status: "pendente",
-      formaPagamento: "Boleto"
-    },
-    {
-      id: 3,
-      clientId: 3,
-      clientName: "Pedro Oliveira",
-      planName: "Básico",
-      valor: 59.90,
-      valorOriginal: 59.90,
-      dataVencimento: "2024-01-15",
-      status: "atrasado",
-      formaPagamento: "Cartão de Crédito"
-    }
-  ])
+  const { 
+    records, 
+    loading, 
+    updateRecordStatus, 
+    updateRecordValue, 
+    getFilteredRecords, 
+    getStats 
+  } = useFinancial()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("todos")
   const [dateFilter, setDateFilter] = useState("")
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null)
+  const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editFormData, setEditFormData] = useState({
-    valor: 0,
-    motivo: ""
+    value: 0,
+    reason: ""
   })
 
   const { toast } = useToast()
 
-  const handleQuitar = (recordId: number) => {
-    setRecords(records.map(record => 
-      record.id === recordId 
-        ? { 
-            ...record, 
-            status: "quitado" as const, 
-            dataPagamento: new Date().toISOString().split('T')[0] 
-          }
-        : record
-    ))
-    
-    const record = records.find(r => r.id === recordId)
-    toast({
-      title: "Pagamento quitado!",
-      description: `Conta de ${record?.clientName} foi marcada como quitada.`,
-    })
+  const handleQuitar = async (recordId: string) => {
+    await updateRecordStatus(recordId, 'quitado')
   }
 
-  const handleDesquitar = (recordId: number) => {
-    setRecords(records.map(record => 
-      record.id === recordId 
-        ? { 
-            ...record, 
-            status: "pendente" as const, 
-            dataPagamento: undefined 
-          }
-        : record
-    ))
-    
-    const record = records.find(r => r.id === recordId)
-    toast({
-      title: "Pagamento desquitado!",
-      description: `Conta de ${record?.clientName} foi marcada como pendente.`,
-    })
+  const handleDesquitar = async (recordId: string) => {
+    await updateRecordStatus(recordId, 'pendente')
   }
 
-  const handleEditValue = () => {
-    if (!editingRecord || !editFormData.motivo.trim()) {
+  const handleEditValue = async () => {
+    if (!editingRecord || !editFormData.reason.trim()) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -129,30 +59,15 @@ export default function Financial() {
       return
     }
 
-    setRecords(records.map(record => 
-      record.id === editingRecord.id 
-        ? { 
-            ...record, 
-            valor: editFormData.valor,
-            motivoAlteracao: editFormData.motivo,
-            observacoes: `Valor alterado de R$ ${editingRecord.valorOriginal.toFixed(2)} para R$ ${editFormData.valor.toFixed(2)}. Motivo: ${editFormData.motivo}`
-          }
-        : record
-    ))
-    
-    toast({
-      title: "Valor atualizado!",
-      description: `Valor da conta de ${editingRecord.clientName} foi alterado.`,
-    })
-    
+    await updateRecordValue(editingRecord.id, editFormData.value, editFormData.reason)
     setIsEditDialogOpen(false)
     setEditingRecord(null)
-    setEditFormData({ valor: 0, motivo: "" })
+    setEditFormData({ value: 0, reason: "" })
   }
 
-  const openEditDialog = (record: FinancialRecord) => {
+  const openEditDialog = (record: any) => {
     setEditingRecord(record)
-    setEditFormData({ valor: record.valor, motivo: "" })
+    setEditFormData({ value: Number(record.value), reason: "" })
     setIsEditDialogOpen(true)
   }
 
@@ -182,33 +97,33 @@ export default function Financial() {
     }
   }
 
-  const filteredRecords = records.filter(record => {
-    const matchesSearch = record.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.planName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "todos" || record.status === statusFilter
-    const matchesDate = !dateFilter || record.dataVencimento.includes(dateFilter)
-    
-    return matchesSearch && matchesStatus && matchesDate
+  const filteredRecords = getFilteredRecords({
+    searchTerm,
+    statusFilter,
+    dateFilter
   })
 
-  const stats = {
-    total: records.length,
-    quitados: records.filter(r => r.status === "quitado").length,
-    pendentes: records.filter(r => r.status === "pendente").length,
-    atrasados: records.filter(r => r.status === "atrasado").length,
-    totalReceita: records.filter(r => r.status === "quitado").reduce((sum, r) => sum + r.valor, 0),
-    totalPendente: records.filter(r => r.status !== "quitado").reduce((sum, r) => sum + r.valor, 0)
+  const stats = getStats()
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">Carregando registros financeiros...</p>
+        </div>
+      </div>
+    )
   }
 
   const generateReport = () => {
     const reportData = filteredRecords.map(record => ({
-      Cliente: record.clientName,
-      Plano: record.planName,
-      Valor: `R$ ${record.valor.toFixed(2)}`,
-      Vencimento: new Date(record.dataVencimento).toLocaleDateString(),
+      Cliente: record.client_name,
+      Plano: record.plan_name,
+      Valor: `R$ ${Number(record.value).toFixed(2)}`,
+      Vencimento: new Date(record.due_date).toLocaleDateString(),
       Status: record.status,
-      Pagamento: record.dataPagamento ? new Date(record.dataPagamento).toLocaleDateString() : "-",
-      "Forma de Pagamento": record.formaPagamento
+      Pagamento: record.payment_date ? new Date(record.payment_date).toLocaleDateString() : "-",
+      "Forma de Pagamento": record.payment_method
     }))
     
     console.log("Relatório gerado:", reportData)
@@ -355,43 +270,43 @@ export default function Financial() {
                   </div>
                   
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground">{record.clientName}</h3>
-                      {getStatusBadge(record.status)}
-                      <Badge variant="outline">{record.planName}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {record.valor !== record.valorOriginal ? (
-                          <span>
-                            <span className="line-through">R$ {record.valorOriginal.toFixed(2)}</span>
-                            {" → "}
-                            <span className="font-medium">R$ {record.valor.toFixed(2)}</span>
-                          </span>
-                        ) : (
-                          `R$ ${record.valor.toFixed(2)}`
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        Vence em {new Date(record.dataVencimento).toLocaleDateString()}
-                      </div>
-                      {record.dataPagamento && (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Pago em {new Date(record.dataPagamento).toLocaleDateString()}
-                        </div>
-                      )}
-                      <div className="text-xs">
-                        {record.formaPagamento}
-                      </div>
-                    </div>
-                    {record.observacoes && (
-                      <p className="text-xs text-muted-foreground italic">
-                        {record.observacoes}
-                      </p>
-                    )}
+                     <div className="flex items-center gap-2">
+                       <h3 className="font-semibold text-foreground">{record.client_name}</h3>
+                       {getStatusBadge(record.status)}
+                       <Badge variant="outline">{record.plan_name}</Badge>
+                     </div>
+                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                       <div className="flex items-center gap-1">
+                         <DollarSign className="h-3 w-3" />
+                         {Number(record.value) !== Number(record.original_value) ? (
+                           <span>
+                             <span className="line-through">R$ {Number(record.original_value).toFixed(2)}</span>
+                             {" → "}
+                             <span className="font-medium">R$ {Number(record.value).toFixed(2)}</span>
+                           </span>
+                         ) : (
+                           `R$ ${Number(record.value).toFixed(2)}`
+                         )}
+                       </div>
+                       <div className="flex items-center gap-1">
+                         <Calendar className="h-3 w-3" />
+                         Vence em {new Date(record.due_date).toLocaleDateString()}
+                       </div>
+                       {record.payment_date && (
+                         <div className="flex items-center gap-1">
+                           <CheckCircle className="h-3 w-3" />
+                           Pago em {new Date(record.payment_date).toLocaleDateString()}
+                         </div>
+                       )}
+                       <div className="text-xs">
+                         {record.payment_method}
+                       </div>
+                     </div>
+                     {record.observations && (
+                       <p className="text-xs text-muted-foreground italic">
+                         {record.observations}
+                       </p>
+                     )}
                   </div>
                 </div>
 
@@ -453,35 +368,35 @@ export default function Financial() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Cliente</Label>
-              <Input value={editingRecord?.clientName || ""} disabled />
-            </div>
+             <div className="space-y-2">
+               <Label>Cliente</Label>
+               <Input value={editingRecord?.client_name || ""} disabled />
+             </div>
 
-            <div className="space-y-2">
-              <Label>Valor Original</Label>
-              <Input value={`R$ ${editingRecord?.valorOriginal.toFixed(2)}`} disabled />
-            </div>
+             <div className="space-y-2">
+               <Label>Valor Original</Label>
+               <Input value={`R$ ${Number(editingRecord?.original_value || 0).toFixed(2)}`} disabled />
+             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="valor">Novo Valor *</Label>
-              <Input
-                id="valor"
-                type="number"
-                step="0.01"
-                min="0"
-                value={editFormData.valor}
-                onChange={(e) => setEditFormData({ ...editFormData, valor: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-              />
-            </div>
+             <div className="space-y-2">
+               <Label htmlFor="value">Novo Valor *</Label>
+               <Input
+                 id="value"
+                 type="number"
+                 step="0.01"
+                 min="0"
+                 value={editFormData.value}
+                 onChange={(e) => setEditFormData({ ...editFormData, value: parseFloat(e.target.value) || 0 })}
+                 placeholder="0.00"
+               />
+             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="motivo">Motivo da Alteração *</Label>
-              <Textarea
-                id="motivo"
-                value={editFormData.motivo}
-                onChange={(e) => setEditFormData({ ...editFormData, motivo: e.target.value })}
+             <div className="space-y-2">
+               <Label htmlFor="reason">Motivo da Alteração *</Label>
+               <Textarea
+                 id="reason"
+                 value={editFormData.reason}
+                 onChange={(e) => setEditFormData({ ...editFormData, reason: e.target.value })}
                 placeholder="Explique o motivo da alteração do valor"
                 rows={3}
               />

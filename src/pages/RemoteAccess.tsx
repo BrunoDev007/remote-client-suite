@@ -8,68 +8,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-
-interface RemoteAccess {
-  id: number
-  clientId: number
-  clientName: string
-  aplicativo: "AnyDesk" | "TeamViewer" | "RustDesk"
-  nomeComputador: string
-  idAcesso: string
-  senhaAcesso?: string
-  createdAt: string
-  lastAccess?: string
-}
+import { useRemoteAccess } from "@/hooks/useRemoteAccess"
+import { useClients } from "@/hooks/useClients"
 
 const aplicativosRemoto = ["AnyDesk", "TeamViewer", "RustDesk"]
 
 export default function RemoteAccess() {
-  const [accesses, setAccesses] = useState<RemoteAccess[]>([
-    {
-      id: 1,
-      clientId: 1,
-      clientName: "João Silva",
-      aplicativo: "AnyDesk",
-      nomeComputador: "PC-Escritorio-Joao",
-      idAcesso: "123456789",
-      senhaAcesso: "senha123",
-      createdAt: "2024-01-15",
-      lastAccess: "2024-01-20"
-    },
-    {
-      id: 2,
-      clientId: 1,
-      clientName: "João Silva", 
-      aplicativo: "TeamViewer",
-      nomeComputador: "Notebook-Casa",
-      idAcesso: "987654321",
-      createdAt: "2024-01-18"
-    }
-  ])
+  const { 
+    accesses, 
+    loading, 
+    createAccess, 
+    updateAccess, 
+    deleteAccess, 
+    getFilteredAccesses 
+  } = useRemoteAccess()
+  
+  const { clients } = useClients()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingAccess, setEditingAccess] = useState<RemoteAccess | null>(null)
+  const [editingAccess, setEditingAccess] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState("")
-  const [formData, setFormData] = useState<Partial<RemoteAccess>>({
-    clientId: 0,
-    aplicativo: "AnyDesk",
-    nomeComputador: "",
-    idAcesso: "",
-    senhaAcesso: ""
+  const [formData, setFormData] = useState({
+    client_id: "",
+    application_type: "AnyDesk",
+    computer_name: "",
+    access_id: "",
+    access_password: ""
   })
 
   const { toast } = useToast()
 
-  // Mock clients data
-  const mockClients = [
-    { id: 1, nome: "João Silva" },
-    { id: 2, nome: "Maria Santos" },
-    { id: 3, nome: "Pedro Oliveira" }
-  ]
-
-  const handleSaveAccess = () => {
-    if (!formData.clientId || !formData.aplicativo || !formData.nomeComputador || !formData.idAcesso) {
+  const handleSaveAccess = async () => {
+    if (!formData.client_id || !formData.application_type || !formData.computer_name || !formData.access_id) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -78,56 +49,30 @@ export default function RemoteAccess() {
       return
     }
 
-    const client = mockClients.find(c => c.id === formData.clientId)
-    if (!client) return
-
     if (editingAccess) {
-      setAccesses(accesses.map(access => 
-        access.id === editingAccess.id 
-          ? { 
-              ...editingAccess, 
-              ...formData,
-              clientName: client.nome,
-              aplicativo: formData.aplicativo as "AnyDesk" | "TeamViewer" | "RustDesk"
-            }
-          : access
-      ))
-      toast({
-        title: "Acesso atualizado!",
-        description: "As informações de acesso foram atualizadas.",
-      })
+      await updateAccess(editingAccess.id, formData)
     } else {
-      const newAccess: RemoteAccess = {
-        id: Date.now(),
-        clientName: client.nome,
-        createdAt: new Date().toISOString().split('T')[0],
-        aplicativo: formData.aplicativo as "AnyDesk" | "TeamViewer" | "RustDesk",
-        ...formData as RemoteAccess
-      }
-      setAccesses([...accesses, newAccess])
-      toast({
-        title: "Acesso cadastrado!",
-        description: "Novo acesso remoto foi adicionado.",
-      })
+      await createAccess(formData)
     }
 
     setIsDialogOpen(false)
     resetForm()
   }
 
-  const handleEditAccess = (access: RemoteAccess) => {
+  const handleEditAccess = (access: any) => {
     setEditingAccess(access)
-    setFormData(access)
+    setFormData({
+      client_id: access.client_id,
+      application_type: access.application_type,
+      computer_name: access.computer_name,
+      access_id: access.access_id,
+      access_password: access.access_password || ""
+    })
     setIsDialogOpen(true)
   }
 
-  const handleDeleteAccess = (id: number) => {
-    const access = accesses.find(a => a.id === id)
-    setAccesses(accesses.filter(access => access.id !== id))
-    toast({
-      title: "Acesso removido!",
-      description: `Acesso de ${access?.clientName} foi removido.`,
-    })
+  const handleDeleteAccess = async (id: string) => {
+    await deleteAccess(id)
   }
 
   const handleCopyToClipboard = (text: string) => {
@@ -141,11 +86,11 @@ export default function RemoteAccess() {
   const resetForm = () => {
     setEditingAccess(null)
     setFormData({
-      clientId: 0,
-      aplicativo: "AnyDesk",
-      nomeComputador: "",
-      idAcesso: "",
-      senhaAcesso: ""
+      client_id: "",
+      application_type: "AnyDesk",
+      computer_name: "",
+      access_id: "",
+      access_password: ""
     })
   }
 
@@ -175,19 +120,25 @@ export default function RemoteAccess() {
     }
   }
 
-  const filteredAccesses = accesses.filter(access => {
-    const matchesSearch = access.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         access.nomeComputador.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         access.idAcesso.includes(searchTerm)
-    const matchesClient = !selectedClient || access.clientId.toString() === selectedClient
-    
-    return matchesSearch && matchesClient
+  const filteredAccesses = getFilteredAccesses({
+    searchTerm,
+    selectedClient
   })
 
-  const accessesByClient = mockClients.map(client => ({
+  const accessesByClient = clients.map(client => ({
     ...client,
-    accesses: accesses.filter(access => access.clientId === client.id)
+    accesses: accesses.filter(access => access.client_id === client.id)
   })).filter(client => client.accesses.length > 0)
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">Carregando acessos remotos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -217,29 +168,29 @@ export default function RemoteAccess() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="clientId">Cliente *</Label>
-                <Select 
-                  value={formData.clientId?.toString() || ""} 
-                  onValueChange={(value) => setFormData({ ...formData, clientId: parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockClients.map(client => (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        {client.nome}
-                      </SelectItem>
-                    ))}
+                 <Select 
+                   value={formData.client_id} 
+                   onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                 >
+                   <SelectTrigger>
+                     <SelectValue placeholder="Selecione o cliente" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {clients.map(client => (
+                       <SelectItem key={client.id} value={client.id}>
+                         {client.name}
+                       </SelectItem>
+                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="aplicativo">Aplicativo de Acesso Remoto *</Label>
-                <Select 
-                  value={formData.aplicativo || "AnyDesk"} 
-                  onValueChange={(value) => setFormData({ ...formData, aplicativo: value as "AnyDesk" | "TeamViewer" | "RustDesk" })}
-                >
+                 <Select 
+                   value={formData.application_type} 
+                   onValueChange={(value) => setFormData({ ...formData, application_type: value })}
+                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -253,33 +204,33 @@ export default function RemoteAccess() {
 
               <div className="space-y-2">
                 <Label htmlFor="nomeComputador">Nome do Computador *</Label>
-                <Input
-                  id="nomeComputador"
-                  value={formData.nomeComputador || ""}
-                  onChange={(e) => setFormData({ ...formData, nomeComputador: e.target.value })}
-                  placeholder="Ex: PC-Escritorio, Notebook-Casa"
-                />
+                 <Input
+                   id="nomeComputador"
+                   value={formData.computer_name}
+                   onChange={(e) => setFormData({ ...formData, computer_name: e.target.value })}
+                   placeholder="Ex: PC-Escritorio, Notebook-Casa"
+                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="idAcesso">ID de Acesso *</Label>
-                <Input
-                  id="idAcesso"
-                  value={formData.idAcesso || ""}
-                  onChange={(e) => setFormData({ ...formData, idAcesso: e.target.value })}
-                  placeholder="Ex: 123456789"
-                />
+                 <Input
+                   id="idAcesso"
+                   value={formData.access_id}
+                   onChange={(e) => setFormData({ ...formData, access_id: e.target.value })}
+                   placeholder="Ex: 123456789"
+                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="senhaAcesso">Senha de Acesso (Opcional)</Label>
-                <Input
-                  id="senhaAcesso"
-                  type="password"
-                  value={formData.senhaAcesso || ""}
-                  onChange={(e) => setFormData({ ...formData, senhaAcesso: e.target.value })}
-                  placeholder="Senha fixa (se houver)"
-                />
+                 <Input
+                   id="senhaAcesso"
+                   type="password"
+                   value={formData.access_password}
+                   onChange={(e) => setFormData({ ...formData, access_password: e.target.value })}
+                   placeholder="Senha fixa (se houver)"
+                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -313,13 +264,13 @@ export default function RemoteAccess() {
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por cliente" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos os clientes</SelectItem>
-                {mockClients.map(client => (
-                  <SelectItem key={client.id} value={client.id.toString()}>
-                    {client.nome}
-                  </SelectItem>
-                ))}
+               <SelectContent>
+                 <SelectItem value="">Todos os clientes</SelectItem>
+                 {clients.map(client => (
+                   <SelectItem key={client.id} value={client.id}>
+                     {client.name}
+                   </SelectItem>
+                 ))}
               </SelectContent>
             </Select>
 
@@ -343,46 +294,43 @@ export default function RemoteAccess() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 ${getAppColor(access.aplicativo)} rounded-lg flex items-center justify-center`}>
-                    {getAppIcon(access.aplicativo)}
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground">{access.clientName}</h3>
-                      <Badge variant="outline">{access.aplicativo}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground font-medium">{access.nomeComputador}</p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono bg-muted px-2 py-1 rounded text-foreground">
-                          {access.idAcesso}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyToClipboard(access.idAcesso)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      {access.senhaAcesso && (
-                        <div className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          <span className="font-mono">••••••</span>
-                        </div>
-                      )}
-                      <div>
-                        Cadastrado em {new Date(access.createdAt).toLocaleDateString()}
-                      </div>
-                      {access.lastAccess && (
-                        <div>
-                          Último acesso: {new Date(access.lastAccess).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                 <div className={`w-12 h-12 ${getAppColor(access.application_type)} rounded-lg flex items-center justify-center`}>
+                   {getAppIcon(access.application_type)}
+                 </div>
+                 
+                 <div className="space-y-1">
+                   <div className="flex items-center gap-2">
+                     <h3 className="font-semibold text-foreground">
+                       {clients.find(c => c.id === access.client_id)?.name || 'Cliente não encontrado'}
+                     </h3>
+                     <Badge variant="outline">{access.application_type}</Badge>
+                   </div>
+                   <p className="text-sm text-muted-foreground font-medium">{access.computer_name}</p>
+                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                     <div className="flex items-center gap-2">
+                       <span className="font-mono bg-muted px-2 py-1 rounded text-foreground">
+                         {access.access_id}
+                       </span>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => handleCopyToClipboard(access.access_id)}
+                         className="h-6 w-6 p-0"
+                       >
+                         <Copy className="h-3 w-3" />
+                       </Button>
+                     </div>
+                     {access.access_password && (
+                       <div className="flex items-center gap-1">
+                         <Eye className="h-3 w-3" />
+                         <span className="font-mono">••••••</span>
+                       </div>
+                     )}
+                     <div>
+                       Cadastrado em {new Date(access.created_at).toLocaleDateString()}
+                     </div>
+                   </div>
+                 </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -418,8 +366,8 @@ export default function RemoteAccess() {
                   <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                     <Monitor className="h-4 w-4 text-primary-foreground" />
                   </div>
-                  {client.nome}
-                  <Badge variant="secondary">{client.accesses.length} computadores</Badge>
+                   {client.name}
+                   <Badge variant="secondary">{client.accesses.length} computadores</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -427,26 +375,26 @@ export default function RemoteAccess() {
                   {client.accesses.map((access) => (
                     <div key={access.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 ${getAppColor(access.aplicativo)} rounded flex items-center justify-center`}>
-                          {getAppIcon(access.aplicativo)}
-                        </div>
-                        <div>
-                          <p className="font-medium">{access.nomeComputador}</p>
-                          <p className="text-sm text-muted-foreground">{access.aplicativo}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
-                            {access.idAcesso}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleCopyToClipboard(access.idAcesso)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </div>
+                       <div className={`w-8 h-8 ${getAppColor(access.application_type)} rounded flex items-center justify-center`}>
+                         {getAppIcon(access.application_type)}
+                       </div>
+                       <div>
+                         <p className="font-medium">{access.computer_name}</p>
+                         <p className="text-sm text-muted-foreground">{access.application_type}</p>
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
+                           {access.access_id}
+                         </span>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleCopyToClipboard(access.access_id)}
+                           className="h-6 w-6 p-0"
+                         >
+                           <Copy className="h-3 w-3" />
+                         </Button>
+                       </div>
                       </div>
                       
                       <div className="flex items-center gap-2">

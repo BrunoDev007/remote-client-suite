@@ -10,29 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
-
-interface Plan {
-  id: number
-  nome: string
-  descricao: string
-  valor: number
-  status: "ativo" | "inativo"
-  createdAt: string
-}
-
-interface PlanClient {
-  id: number
-  clientId: number
-  planId: number
-  clientName: string
-  planName: string
-  formaPagamento: string
-  dataPagamento: string
-  valor: number
-  contratoUrl?: string
-  status: "ativo" | "inativo"
-  vinculadoEm: string
-}
+import { usePlans } from "@/hooks/usePlans"
+import { useClients } from "@/hooks/useClients"
+import { useToast } from "@/hooks/use-toast"
 
 const formasPagamento = [
   "Dinheiro",
@@ -44,72 +24,42 @@ const formasPagamento = [
 ]
 
 export default function Plans() {
-  const [plans, setPlans] = useState<Plan[]>([
-    {
-      id: 1,
-      nome: "Básico",
-      descricao: "Plano básico com suporte essencial",
-      valor: 59.90,
-      status: "ativo",
-      createdAt: "2024-01-15"
-    },
-    {
-      id: 2,
-      nome: "Premium",
-      descricao: "Plano premium com recursos avançados",
-      valor: 129.90,
-      status: "ativo",
-      createdAt: "2024-01-15"
-    }
-  ])
-
-  const [planClients, setPlanClients] = useState<PlanClient[]>([
-    {
-      id: 1,
-      clientId: 1,
-      planId: 1,
-      clientName: "João Silva",
-      planName: "Básico",
-      formaPagamento: "PIX",
-      dataPagamento: "2024-01-25",
-      valor: 59.90,
-      status: "ativo",
-      vinculadoEm: "2024-01-15"
-    }
-  ])
+  const { 
+    plans, 
+    clientPlans, 
+    loading, 
+    createPlan, 
+    updatePlan, 
+    deletePlan, 
+    linkClientToPlan, 
+    unlinkClient 
+  } = usePlans()
+  
+  const { clients } = useClients()
+  const { toast } = useToast()
 
   const [activeTab, setActiveTab] = useState("plans")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null)
+  const [editingPlan, setEditingPlan] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   
-  const [planFormData, setPlanFormData] = useState<Partial<Plan>>({
-    nome: "",
-    descricao: "",
-    valor: 0,
-    status: "ativo"
+  const [planFormData, setPlanFormData] = useState({
+    name: "",
+    description: "",
+    value: 0
   })
 
   const [linkFormData, setLinkFormData] = useState({
-    clientId: "",
-    planId: "",
-    formaPagamento: "",
-    dataPagamento: "",
-    contratoFile: null as File | null
+    client_id: "",
+    plan_id: "",
+    payment_method: "",
+    payment_date: "",
+    contract_url: ""
   })
 
-  const { toast } = useToast()
-
-  // Mock clients data
-  const mockClients = [
-    { id: 1, nome: "João Silva" },
-    { id: 2, nome: "Maria Santos" },
-    { id: 3, nome: "Pedro Oliveira" }
-  ]
-
-  const handleSavePlan = () => {
-    if (!planFormData.nome || !planFormData.valor) {
+  const handleSavePlan = async () => {
+    if (!planFormData.name || !planFormData.value) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -119,43 +69,17 @@ export default function Plans() {
     }
 
     if (editingPlan) {
-      const updatedPlans = plans.map(plan => 
-        plan.id === editingPlan.id 
-          ? { ...editingPlan, ...planFormData }
-          : plan
-      )
-      setPlans(updatedPlans)
-      
-      // Atualizar valor nos clientes vinculados
-      setPlanClients(planClients.map(pc => 
-        pc.planId === editingPlan.id 
-          ? { ...pc, valor: planFormData.valor || pc.valor, planName: planFormData.nome || pc.planName }
-          : pc
-      ))
-      
-      toast({
-        title: "Plano atualizado!",
-        description: "O plano foi atualizado e os valores dos clientes vinculados foram atualizados.",
-      })
+      await updatePlan(editingPlan.id, planFormData)
     } else {
-      const newPlan: Plan = {
-        id: Date.now(),
-        createdAt: new Date().toISOString().split('T')[0],
-        ...planFormData as Plan
-      }
-      setPlans([...plans, newPlan])
-      toast({
-        title: "Plano cadastrado!",
-        description: "Novo plano foi adicionado com sucesso.",
-      })
+      await createPlan(planFormData)
     }
 
     setIsDialogOpen(false)
     resetPlanForm()
   }
 
-  const handleLinkClient = () => {
-    if (!linkFormData.clientId || !linkFormData.planId || !linkFormData.formaPagamento || !linkFormData.dataPagamento) {
+  const handleLinkClient = async () => {
+    if (!linkFormData.client_id || !linkFormData.plan_id || !linkFormData.payment_method || !linkFormData.payment_date) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -164,91 +88,56 @@ export default function Plans() {
       return
     }
 
-    const client = mockClients.find(c => c.id === parseInt(linkFormData.clientId))
-    const plan = plans.find(p => p.id === parseInt(linkFormData.planId))
-
-    if (!client || !plan) return
-
-    const newPlanClient: PlanClient = {
-      id: Date.now(),
-      clientId: client.id,
-      planId: plan.id,
-      clientName: client.nome,
-      planName: plan.nome,
-      formaPagamento: linkFormData.formaPagamento,
-      dataPagamento: linkFormData.dataPagamento,
-      valor: plan.valor,
-      status: "ativo",
-      vinculadoEm: new Date().toISOString().split('T')[0],
-      contratoUrl: linkFormData.contratoFile ? URL.createObjectURL(linkFormData.contratoFile) : undefined
-    }
-
-    setPlanClients([...planClients, newPlanClient])
+    await linkClientToPlan(linkFormData)
     setIsLinkDialogOpen(false)
     resetLinkForm()
-    
-    toast({
-      title: "Cliente vinculado!",
-      description: `${client.nome} foi vinculado ao plano ${plan.nome}.`,
-    })
   }
 
-  const handleUnlinkClient = (planClientId: number) => {
-    const planClient = planClients.find(pc => pc.id === planClientId)
-    setPlanClients(planClients.filter(pc => pc.id !== planClientId))
-    
-    toast({
-      title: "Cliente desvinculado!",
-      description: `${planClient?.clientName} foi desvinculado do plano.`,
-    })
+  const handleUnlinkClient = async (planClientId: string) => {
+    await unlinkClient(planClientId)
   }
 
-  const handleDeletePlan = (id: number) => {
-    const linkedClients = planClients.filter(pc => pc.planId === id)
-    if (linkedClients.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não é possível excluir um plano com clientes vinculados.",
-      })
-      return
-    }
-
-    setPlans(plans.filter(plan => plan.id !== id))
-    toast({
-      title: "Plano removido!",
-      description: "O plano foi removido do sistema.",
-    })
+  const handleDeletePlan = async (id: string) => {
+    await deletePlan(id)
   }
 
   const resetPlanForm = () => {
     setEditingPlan(null)
     setPlanFormData({
-      nome: "",
-      descricao: "",
-      valor: 0,
-      status: "ativo"
+      name: "",
+      description: "",
+      value: 0
     })
   }
 
   const resetLinkForm = () => {
     setLinkFormData({
-      clientId: "",
-      planId: "",
-      formaPagamento: "",
-      dataPagamento: "",
-      contratoFile: null
+      client_id: "",
+      plan_id: "",
+      payment_method: "",
+      payment_date: "",
+      contract_url: ""
     })
   }
 
   const filteredPlans = plans.filter(plan =>
-    plan.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    plan.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const filteredPlanClients = planClients.filter(pc =>
-    pc.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pc.planName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPlanClients = clientPlans.filter(pc =>
+    pc.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pc.plan_name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">Carregando planos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -286,30 +175,30 @@ export default function Plans() {
                         <SelectValue placeholder="Selecione o cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockClients.map(client => (
-                          <SelectItem key={client.id} value={client.id.toString()}>
-                            {client.nome}
-                          </SelectItem>
-                        ))}
+                       {clients.map(client => (
+                           <SelectItem key={client.id} value={client.id}>
+                             {client.name}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Plano</Label>
-                    <Select 
-                      value={linkFormData.planId} 
-                      onValueChange={(value) => setLinkFormData({ ...linkFormData, planId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {plans.filter(p => p.status === "ativo").map(plan => (
-                          <SelectItem key={plan.id} value={plan.id.toString()}>
-                            {plan.nome} - R$ {plan.valor.toFixed(2)}
-                          </SelectItem>
-                        ))}
+                     <Select 
+                       value={linkFormData.plan_id} 
+                       onValueChange={(value) => setLinkFormData({ ...linkFormData, plan_id: value })}
+                     >
+                       <SelectTrigger>
+                         <SelectValue placeholder="Selecione o plano" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {plans.map(plan => (
+                           <SelectItem key={plan.id} value={plan.id}>
+                             {plan.name} - R$ {Number(plan.value).toFixed(2)}
+                           </SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -318,39 +207,40 @@ export default function Plans() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Forma de Pagamento</Label>
-                    <Select 
-                      value={linkFormData.formaPagamento} 
-                      onValueChange={(value) => setLinkFormData({ ...linkFormData, formaPagamento: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {formasPagamento.map(forma => (
-                          <SelectItem key={forma} value={forma}>{forma}</SelectItem>
-                        ))}
+                     <Select 
+                       value={linkFormData.payment_method} 
+                       onValueChange={(value) => setLinkFormData({ ...linkFormData, payment_method: value })}
+                     >
+                       <SelectTrigger>
+                         <SelectValue placeholder="Selecione" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {formasPagamento.map(forma => (
+                           <SelectItem key={forma} value={forma}>{forma}</SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label>Data de Pagamento</Label>
-                    <Input
-                      type="date"
-                      value={linkFormData.dataPagamento}
-                      onChange={(e) => setLinkFormData({ ...linkFormData, dataPagamento: e.target.value })}
-                    />
+                     <Input
+                       type="date"
+                       value={linkFormData.payment_date}
+                       onChange={(e) => setLinkFormData({ ...linkFormData, payment_date: e.target.value })}
+                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Contrato (Opcional)</Label>
-                  <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => setLinkFormData({ ...linkFormData, contratoFile: e.target.files?.[0] || null })}
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label>URL do Contrato (Opcional)</Label>
+                   <Input
+                     type="url"
+                     placeholder="https://exemplo.com/contrato.pdf"
+                     value={linkFormData.contract_url}
+                     onChange={(e) => setLinkFormData({ ...linkFormData, contract_url: e.target.value })}
+                   />
+                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>
@@ -382,57 +272,39 @@ export default function Plans() {
               </DialogHeader>
 
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome do Plano *</Label>
-                  <Input
-                    id="nome"
-                    value={planFormData.nome || ""}
-                    onChange={(e) => setPlanFormData({ ...planFormData, nome: e.target.value })}
-                    placeholder="Ex: Básico, Premium, Empresarial"
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="name">Nome do Plano *</Label>
+                   <Input
+                     id="name"
+                     value={planFormData.name}
+                     onChange={(e) => setPlanFormData({ ...planFormData, name: e.target.value })}
+                     placeholder="Ex: Básico, Premium, Empresarial"
+                   />
+                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea
-                    id="descricao"
-                    value={planFormData.descricao || ""}
-                    onChange={(e) => setPlanFormData({ ...planFormData, descricao: e.target.value })}
-                    placeholder="Descreva os recursos e benefícios do plano"
-                    rows={3}
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="description">Descrição</Label>
+                   <Textarea
+                     id="description"
+                     value={planFormData.description}
+                     onChange={(e) => setPlanFormData({ ...planFormData, description: e.target.value })}
+                     placeholder="Descreva os recursos e benefícios do plano"
+                     rows={3}
+                   />
+                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="valor">Valor Mensal (R$) *</Label>
-                    <Input
-                      id="valor"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={planFormData.valor || ""}
-                      onChange={(e) => setPlanFormData({ ...planFormData, valor: parseFloat(e.target.value) || 0 })}
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select 
-                      value={planFormData.status || "ativo"} 
-                      onValueChange={(value) => setPlanFormData({ ...planFormData, status: value as "ativo" | "inativo" })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="inativo">Inativo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="value">Valor Mensal (R$) *</Label>
+                   <Input
+                     id="value"
+                     type="number"
+                     step="0.01"
+                     min="0"
+                     value={planFormData.value || ""}
+                     onChange={(e) => setPlanFormData({ ...planFormData, value: parseFloat(e.target.value) || 0 })}
+                     placeholder="0.00"
+                   />
+                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -508,24 +380,28 @@ export default function Plans() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditingPlan(plan)
-                          setPlanFormData(plan)
-                          setIsDialogOpen(true)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeletePlan(plan.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={() => {
+                       setEditingPlan(plan)
+                       setPlanFormData({
+                         name: plan.name,
+                         description: plan.description || "",
+                         value: Number(plan.value)
+                       })
+                       setIsDialogOpen(true)
+                     }}
+                   >
+                     <Edit className="h-4 w-4" />
+                   </Button>
+                   <Button
+                     variant="destructive"
+                     size="sm"
+                     onClick={() => handleDeletePlan(plan.id)}
+                   >
+                     <Trash2 className="h-4 w-4" />
+                   </Button>
                     </div>
                   </div>
                 </CardContent>
