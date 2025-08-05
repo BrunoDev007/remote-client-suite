@@ -54,6 +54,8 @@ export default function Plans() {
     plan_id: "",
     payment_method: "",
     payment_date: "",
+    start_date: "",
+    end_date: "",
     contract_url: ""
   })
 
@@ -78,7 +80,7 @@ export default function Plans() {
   }
 
   const handleLinkClient = async () => {
-    if (!linkFormData.client_id || !linkFormData.plan_id || !linkFormData.payment_method || !linkFormData.payment_date) {
+    if (!linkFormData.client_id || !linkFormData.plan_id || !linkFormData.payment_method || !linkFormData.payment_date || !linkFormData.start_date || !linkFormData.end_date) {
       toast({
         variant: "destructive",
         title: "Erro",
@@ -115,6 +117,8 @@ export default function Plans() {
       plan_id: "",
       payment_method: "",
       payment_date: "",
+      start_date: "",
+      end_date: "",
       contract_url: ""
     })
   }
@@ -174,11 +178,11 @@ export default function Plans() {
                         <SelectValue placeholder="Selecione o cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                       {clients.map(client => (
-                           <SelectItem key={client.id} value={client.id}>
-                             {client.name}
-                           </SelectItem>
-                         ))}
+                      {clients.map(client => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.company_name || client.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -227,6 +231,26 @@ export default function Plans() {
                        type="date"
                        value={linkFormData.payment_date}
                        onChange={(e) => setLinkFormData({ ...linkFormData, payment_date: e.target.value })}
+                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Data de Início *</Label>
+                     <Input
+                       type="date"
+                       value={linkFormData.start_date}
+                       onChange={(e) => setLinkFormData({ ...linkFormData, start_date: e.target.value })}
+                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Data de Fim *</Label>
+                     <Input
+                       type="date"
+                       value={linkFormData.end_date}
+                       onChange={(e) => setLinkFormData({ ...linkFormData, end_date: e.target.value })}
                      />
                   </div>
                 </div>

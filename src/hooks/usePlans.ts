@@ -229,6 +229,13 @@ export function usePlans() {
 
   const unlinkClient = async (clientPlanId: string) => {
     try {
+      // Delete pending financial records for this client plan
+      await supabase
+        .from('financial_records')
+        .delete()
+        .eq('client_plan_id', clientPlanId)
+        .eq('status', 'pendente')
+
       const { error } = await supabase
         .from('client_plans')
         .update({ is_active: false })
@@ -239,7 +246,7 @@ export function usePlans() {
       setClientPlans(clientPlans.filter(cp => cp.id !== clientPlanId))
       toast({
         title: "Cliente desvinculado!",
-        description: "Cliente foi desvinculado do plano.",
+        description: "Cliente foi desvinculado do plano e suas contas pendentes foram removidas.",
       })
       return { success: true }
     } catch (error: any) {

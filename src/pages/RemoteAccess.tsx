@@ -288,75 +288,77 @@ export default function RemoteAccess() {
         </CardContent>
       </Card>
 
-      {/* Access List */}
-      <div className="space-y-4">
-        {filteredAccesses.map((access) => (
-          <Card key={access.id} className="hover:shadow-card transition-smooth">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                 <div className={`w-12 h-12 ${getAppColor(access.application_type)} rounded-lg flex items-center justify-center`}>
-                   {getAppIcon(access.application_type)}
-                 </div>
-                 
-                 <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground">
-                        {clients.find(c => c.id === access.client_id)?.company_name || clients.find(c => c.id === access.client_id)?.name || 'Cliente não encontrado'}
-                      </h3>
-                      <Badge variant="outline">{access.application_type}</Badge>
-                    </div>
-                   <p className="text-sm text-muted-foreground font-medium">{access.computer_name}</p>
-                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                     <div className="flex items-center gap-2">
-                       <span className="font-mono bg-muted px-2 py-1 rounded text-foreground">
-                         {access.access_id}
-                       </span>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => handleCopyToClipboard(access.access_id)}
-                         className="h-6 w-6 p-0"
-                       >
-                         <Copy className="h-3 w-3" />
-                       </Button>
-                     </div>
-                     {access.access_password && (
-                       <div className="flex items-center gap-1">
-                         <Eye className="h-3 w-3" />
-                         <span className="font-mono">••••••</span>
+      {/* Access List - Only show when there's an active search */}
+      {(searchTerm || selectedClient !== "all") && (
+        <div className="space-y-4">
+          {filteredAccesses.map((access) => (
+            <Card key={access.id} className="hover:shadow-card transition-smooth">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                   <div className={`w-12 h-12 ${getAppColor(access.application_type)} rounded-lg flex items-center justify-center`}>
+                     {getAppIcon(access.application_type)}
+                   </div>
+                   
+                   <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground">
+                          {clients.find(c => c.id === access.client_id)?.company_name || clients.find(c => c.id === access.client_id)?.name || 'Cliente não encontrado'}
+                        </h3>
+                        <Badge variant="outline">{access.application_type}</Badge>
+                      </div>
+                     <p className="text-sm text-muted-foreground font-medium">{access.computer_name}</p>
+                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                       <div className="flex items-center gap-2">
+                         <span className="font-mono bg-muted px-2 py-1 rounded text-foreground">
+                           {access.access_id}
+                         </span>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleCopyToClipboard(access.access_id)}
+                           className="h-6 w-6 p-0"
+                         >
+                           <Copy className="h-3 w-3" />
+                         </Button>
                        </div>
-                     )}
-                     <div>
-                       Cadastrado em {new Date(access.created_at).toLocaleDateString()}
+                       {access.access_password && (
+                         <div className="flex items-center gap-1">
+                           <Eye className="h-3 w-3" />
+                           <span className="font-mono">••••••</span>
+                         </div>
+                       )}
+                       <div>
+                         Cadastrado em {new Date(access.created_at).toLocaleDateString()}
+                       </div>
                      </div>
                    </div>
-                 </div>
-                </div>
+                  </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditAccess(access)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteAccess(access.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditAccess(access)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteAccess(access.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Grouped by Client View */}
+      {/* Grouped by Client View - Only show when no search is active */}
       {!searchTerm && selectedClient === "all" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-foreground">Acessos por Cliente</h2>

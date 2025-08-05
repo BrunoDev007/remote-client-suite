@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter } from "lucide-react"
+import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,6 +25,7 @@ export default function Financial() {
     loading, 
     updateRecordStatus, 
     updateRecordValue, 
+    deleteRecord,
     getFilteredRecords, 
     getStats 
   } = useFinancial()
@@ -47,6 +48,10 @@ export default function Financial() {
 
   const handleDesquitar = async (recordId: string) => {
     await updateRecordStatus(recordId, 'pendente')
+  }
+
+  const handleDeleteRecord = async (recordId: string) => {
+    await deleteRecord(recordId)
   }
 
   const handleEditValue = async () => {
@@ -318,6 +323,16 @@ export default function Financial() {
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
+                  
+                  {record.status === "pendente" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteRecord(record.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                   
                   {record.status === "quitado" ? (
                     <Button

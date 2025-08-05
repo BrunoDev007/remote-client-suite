@@ -167,6 +167,31 @@ export function useFinancial() {
     })
   }
 
+  const deleteRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from('financial_records')
+        .delete()
+        .eq('id', recordId)
+
+      if (error) throw error
+
+      setRecords(records.filter(record => record.id !== recordId))
+      toast({
+        title: "Conta excluída!",
+        description: "A conta pendente foi removida do sistema.",
+      })
+      return { success: true }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao excluir conta: " + error.message,
+      })
+      return { success: false, error }
+    }
+  }
+
   const getStats = () => {
     const now = new Date()
     const today = now.toISOString().split('T')[0]
@@ -193,6 +218,7 @@ export function useFinancial() {
     loading,
     updateRecordStatus,
     updateRecordValue,
+    deleteRecord,
     getFilteredRecords,
     getStats,
     refetchRecords: fetchFinancialRecords
