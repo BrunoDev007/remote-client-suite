@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Search, Edit, Trash2, Monitor, Laptop, Server, Eye, Copy } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Monitor, Laptop, Server, Eye, Copy, ChevronDown, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,6 +29,7 @@ export default function RemoteAccess() {
   const [editingAccess, setEditingAccess] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState("all")
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     client_id: "",
     application_type: "AnyDesk",
@@ -176,11 +177,11 @@ export default function RemoteAccess() {
                      <SelectValue placeholder="Selecione o cliente" />
                    </SelectTrigger>
                    <SelectContent>
-                     {clients.map(client => (
-                       <SelectItem key={client.id} value={client.id}>
-                         {client.name}
-                       </SelectItem>
-                     ))}
+                      {clients.map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.company_name || client.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -268,7 +269,7 @@ export default function RemoteAccess() {
                  <SelectItem value="all">Todos os clientes</SelectItem>
                  {clients.map(client => (
                    <SelectItem key={client.id} value={client.id}>
-                     {client.name}
+                     {client.company_name || client.name}
                    </SelectItem>
                  ))}
               </SelectContent>
@@ -299,12 +300,12 @@ export default function RemoteAccess() {
                  </div>
                  
                  <div className="space-y-1">
-                   <div className="flex items-center gap-2">
-                     <h3 className="font-semibold text-foreground">
-                       {clients.find(c => c.id === access.client_id)?.name || 'Cliente não encontrado'}
-                     </h3>
-                     <Badge variant="outline">{access.application_type}</Badge>
-                   </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground">
+                        {clients.find(c => c.id === access.client_id)?.company_name || clients.find(c => c.id === access.client_id)?.name || 'Cliente não encontrado'}
+                      </h3>
+                      <Badge variant="outline">{access.application_type}</Badge>
+                    </div>
                    <p className="text-sm text-muted-foreground font-medium">{access.computer_name}</p>
                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                      <div className="flex items-center gap-2">
@@ -361,18 +362,35 @@ export default function RemoteAccess() {
           <h2 className="text-xl font-semibold text-foreground">Acessos por Cliente</h2>
           {accessesByClient.map((client) => (
             <Card key={client.id}>
-              <CardHeader>
+              <CardHeader 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  const newExpanded = new Set(expandedClients)
+                  if (newExpanded.has(client.id)) {
+                    newExpanded.delete(client.id)
+                  } else {
+                    newExpanded.add(client.id)
+                  }
+                  setExpandedClients(newExpanded)
+                }}
+              >
                 <CardTitle className="flex items-center gap-2">
+                  {expandedClients.has(client.id) ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
                   <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                     <Monitor className="h-4 w-4 text-primary-foreground" />
                   </div>
-                   {client.name}
+                   {client.company_name || client.name}
                    <Badge variant="secondary">{client.accesses.length} computadores</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-3">
-                  {client.accesses.map((access) => (
+              {expandedClients.has(client.id) && (
+                <CardContent>
+                  <div className="grid gap-3">
+                    {client.accesses.map((access) => (
                     <div key={access.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                        <div className={`w-8 h-8 ${getAppColor(access.application_type)} rounded flex items-center justify-center`}>
@@ -413,10 +431,11 @@ export default function RemoteAccess() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
             </Card>
           ))}
         </div>

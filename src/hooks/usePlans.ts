@@ -208,6 +208,10 @@ export function usePlans() {
       }
 
       setClientPlans([formattedData, ...clientPlans])
+      
+      // Create financial record
+      await createFinancialRecord(linkData.client_id, linkData.plan_id, data.id, planData.value, linkData)
+      
       toast({
         title: "Cliente vinculado!",
         description: `Cliente foi vinculado ao plano com sucesso.`,
@@ -245,6 +249,38 @@ export function usePlans() {
         description: "Erro ao desvincular cliente: " + error.message,
       })
       return { success: false, error }
+    }
+  }
+
+  const createFinancialRecord = async (clientId: string, planId: string, clientPlanId: string, value: number, linkData: {
+    client_id: string
+    plan_id: string
+    payment_method: string
+    payment_date: string
+    contract_url?: string
+  }) => {
+    try {
+      // Calculate next due date (30 days from payment date)
+      const paymentDate = new Date(linkData.payment_date)
+      const dueDate = new Date(paymentDate)
+      dueDate.setMonth(dueDate.getMonth() + 1)
+
+      const { error } = await supabase
+        .from('financial_records')
+        .insert([{
+          client_id: clientId,
+          plan_id: planId,
+          client_plan_id: clientPlanId,
+          value: value,
+          original_value: value,
+          due_date: dueDate.toISOString().split('T')[0],
+          payment_method: linkData.payment_method,
+          status: 'pendente'
+        }])
+
+      if (error) throw error
+    } catch (error: any) {
+      console.error('Erro ao criar registro financeiro:', error)
     }
   }
 
