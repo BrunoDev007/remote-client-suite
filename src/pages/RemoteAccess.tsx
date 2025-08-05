@@ -28,7 +28,7 @@ export default function RemoteAccess() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAccess, setEditingAccess] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedClient, setSelectedClient] = useState("")
+  const [selectedClient, setSelectedClient] = useState("all")
   const [formData, setFormData] = useState({
     client_id: "",
     application_type: "AnyDesk",
@@ -265,7 +265,7 @@ export default function RemoteAccess() {
                 <SelectValue placeholder="Filtrar por cliente" />
               </SelectTrigger>
                <SelectContent>
-                 <SelectItem value="">Todos os clientes</SelectItem>
+                 <SelectItem value="all">Todos os clientes</SelectItem>
                  {clients.map(client => (
                    <SelectItem key={client.id} value={client.id}>
                      {client.name}
@@ -278,7 +278,7 @@ export default function RemoteAccess() {
               variant="outline" 
               onClick={() => {
                 setSearchTerm("")
-                setSelectedClient("")
+                setSelectedClient("all")
               }}
             >
               Limpar Filtros
@@ -356,7 +356,7 @@ export default function RemoteAccess() {
       </div>
 
       {/* Grouped by Client View */}
-      {!searchTerm && !selectedClient && (
+      {!searchTerm && selectedClient === "all" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-foreground">Acessos por Cliente</h2>
           {accessesByClient.map((client) => (

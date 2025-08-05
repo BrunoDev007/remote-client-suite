@@ -123,6 +123,7 @@ export function useRemoteAccess() {
         access.access_id.includes(filters.searchTerm)
       
       const matchesClient = !filters.selectedClient || 
+        filters.selectedClient === "all" ||
         access.client_id === filters.selectedClient
       
       return matchesSearch && matchesClient
