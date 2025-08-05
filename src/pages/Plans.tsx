@@ -12,7 +12,6 @@ import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 import { usePlans } from "@/hooks/usePlans"
 import { useClients } from "@/hooks/useClients"
-import { useToast } from "@/hooks/use-toast"
 
 const formasPagamento = [
   "Dinheiro",
@@ -168,8 +167,8 @@ export default function Plans() {
                   <div className="space-y-2">
                     <Label>Cliente</Label>
                     <Select 
-                      value={linkFormData.clientId} 
-                      onValueChange={(value) => setLinkFormData({ ...linkFormData, clientId: value })}
+                      value={linkFormData.client_id} 
+                      onValueChange={(value) => setLinkFormData({ ...linkFormData, client_id: value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o cliente" />
@@ -356,24 +355,24 @@ export default function Plans() {
                       
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{plan.nome}</h3>
-                          <Badge variant={plan.status === "ativo" ? "default" : "secondary"}>
-                            {plan.status}
+                          <h3 className="font-semibold text-foreground">{plan.name}</h3>
+                          <Badge variant="default">
+                            Ativo
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{plan.descricao}</p>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            R$ {plan.valor.toFixed(2)}/mês
+                            R$ {Number(plan.value).toFixed(2)}/mês
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {planClients.filter(pc => pc.planId === plan.id).length} clientes
+                            {clientPlans.filter(pc => pc.plan_id === plan.id).length} clientes
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Criado em {new Date(plan.createdAt).toLocaleDateString()}
+                            Criado em {new Date(plan.created_at).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
@@ -439,29 +438,29 @@ export default function Plans() {
                       
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-foreground">{planClient.clientName}</h3>
-                          <Badge variant="default">{planClient.planName}</Badge>
-                          <Badge variant={planClient.status === "ativo" ? "default" : "secondary"}>
-                            {planClient.status}
+                          <h3 className="font-semibold text-foreground">{planClient.client_name}</h3>
+                          <Badge variant="default">{planClient.plan_name}</Badge>
+                          <Badge variant="default">
+                            Ativo
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            R$ {planClient.valor.toFixed(2)}
+                            R$ {Number(planClient.value).toFixed(2)}
                           </div>
                           <div className="flex items-center gap-1">
                             <CreditCard className="h-3 w-3" />
-                            {planClient.formaPagamento}
+                            {planClient.payment_method}
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Vence dia {new Date(planClient.dataPagamento).getDate()}
+                            Vence dia {new Date(planClient.payment_date).getDate()}
                           </div>
-                          {planClient.contratoUrl && (
+                          {planClient.contract_url && (
                             <div className="flex items-center gap-1">
                               <FileText className="h-3 w-3" />
-                              <a href={planClient.contratoUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              <a href={planClient.contract_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                                 Contrato
                               </a>
                             </div>
@@ -509,7 +508,7 @@ export default function Plans() {
               <CardContent>
                 <div className="text-3xl font-bold text-primary">{plans.length}</div>
                 <p className="text-muted-foreground text-sm">
-                  {plans.filter(p => p.status === "ativo").length} ativos
+                  {plans.length} ativos
                 </p>
               </CardContent>
             </Card>
@@ -522,9 +521,9 @@ export default function Plans() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-primary">{planClients.length}</div>
+                <div className="text-3xl font-bold text-primary">{clientPlans.length}</div>
                 <p className="text-muted-foreground text-sm">
-                  {planClients.filter(pc => pc.status === "ativo").length} ativos
+                  {clientPlans.length} ativos
                 </p>
               </CardContent>
             </Card>
@@ -538,7 +537,7 @@ export default function Plans() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">
-                  R$ {planClients.filter(pc => pc.status === "ativo").reduce((sum, pc) => sum + pc.valor, 0).toFixed(2)}
+                  R$ {clientPlans.reduce((sum, pc) => sum + Number(pc.value), 0).toFixed(2)}
                 </div>
                 <p className="text-muted-foreground text-sm">
                   Estimativa mensal
@@ -555,17 +554,17 @@ export default function Plans() {
             <CardContent>
               <div className="space-y-4">
                 {plans.map(plan => {
-                  const linkedClients = planClients.filter(pc => pc.planId === plan.id)
-                  const revenue = linkedClients.reduce((sum, pc) => sum + pc.valor, 0)
+                  const linkedClients = clientPlans.filter(pc => pc.plan_id === plan.id)
+                  const revenue = linkedClients.reduce((sum, pc) => sum + Number(pc.value), 0)
                   
                   return (
                     <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
-                        <h4 className="font-medium">{plan.nome}</h4>
-                        <p className="text-sm text-muted-foreground">{plan.descricao}</p>
+                        <h4 className="font-medium">{plan.name}</h4>
+                        <p className="text-sm text-muted-foreground">{plan.description}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">R$ {plan.valor.toFixed(2)}/mês</p>
+                        <p className="font-medium">R$ {Number(plan.value).toFixed(2)}/mês</p>
                         <p className="text-sm text-muted-foreground">
                           {linkedClients.length} clientes • R$ {revenue.toFixed(2)} total
                         </p>
