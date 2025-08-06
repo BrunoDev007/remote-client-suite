@@ -25,6 +25,7 @@ export default function Financial() {
     loading, 
     updateRecordStatus, 
     updateRecordValue, 
+    updateRecordDueDate,
     deleteRecord,
     getFilteredRecords, 
     getStats 
@@ -34,11 +35,13 @@ export default function Financial() {
   const [statusFilter, setStatusFilter] = useState("todos")
   const [dateFilter, setDateFilter] = useState("")
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDateDialogOpen, setIsDateDialogOpen] = useState(false)
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editFormData, setEditFormData] = useState({
     value: 0,
     reason: ""
   })
+  const [newDueDate, setNewDueDate] = useState("")
 
   const { toast } = useToast()
 
@@ -74,6 +77,28 @@ export default function Financial() {
     setEditingRecord(record)
     setEditFormData({ value: Number(record.value), reason: "" })
     setIsEditDialogOpen(true)
+  }
+
+  const openDateDialog = (record: any) => {
+    setEditingRecord(record)
+    setNewDueDate(record.due_date)
+    setIsDateDialogOpen(true)
+  }
+
+  const handleEditDueDate = async () => {
+    if (!editingRecord || !newDueDate) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione uma nova data de vencimento.",
+      })
+      return
+    }
+
+    await updateRecordDueDate(editingRecord.id, newDueDate)
+    setIsDateDialogOpen(false)
+    setEditingRecord(null)
+    setNewDueDate("")
   }
 
   const getStatusBadge = (status: string) => {
@@ -320,8 +345,18 @@ export default function Financial() {
                     variant="outline"
                     size="sm"
                     onClick={() => openEditDialog(record)}
+                    title="Editar valor"
                   >
                     <Edit2 className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDateDialog(record)}
+                    title="Editar data de vencimento"
+                  >
+                    <Calendar className="h-4 w-4" />
                   </Button>
                   
                   {record.status === "pendente" && (
@@ -423,6 +458,49 @@ export default function Financial() {
               </Button>
               <Button onClick={handleEditValue} variant="premium">
                 Salvar Alteração
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Due Date Dialog */}
+      <Dialog open={isDateDialogOpen} onOpenChange={setIsDateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Data de Vencimento</DialogTitle>
+            <DialogDescription>
+              Altere a data de vencimento do título
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+             <div className="space-y-2">
+               <Label>Cliente</Label>
+               <Input value={editingRecord?.client_name || ""} disabled />
+             </div>
+
+             <div className="space-y-2">
+               <Label>Data Atual</Label>
+               <Input value={editingRecord ? new Date(editingRecord.due_date).toLocaleDateString() : ""} disabled />
+             </div>
+
+             <div className="space-y-2">
+               <Label htmlFor="newDueDate">Nova Data de Vencimento *</Label>
+               <Input
+                 id="newDueDate"
+                 type="date"
+                 value={newDueDate}
+                 onChange={(e) => setNewDueDate(e.target.value)}
+               />
+             </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => setIsDateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditDueDate} variant="premium">
+                Salvar Data
               </Button>
             </div>
           </div>

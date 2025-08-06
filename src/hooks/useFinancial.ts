@@ -213,11 +213,52 @@ export function useFinancial() {
     }
   }
 
+  const updateRecordDueDate = async (recordId: string, newDueDate: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('financial_records')
+        .update({ due_date: newDueDate })
+        .eq('id', recordId)
+        .select(`
+          *,
+          clients!inner(name, company_name),
+          plans!inner(name)
+        `)
+        .single()
+
+      if (error) throw error
+
+      const formattedData = {
+        ...data,
+        client_name: data.clients.company_name || data.clients.name,
+        plan_name: data.plans.name
+      }
+
+      setRecords(records.map(record => 
+        record.id === recordId ? formattedData : record
+      ))
+
+      toast({
+        title: "Data atualizada!",
+        description: "Data de vencimento foi alterada com sucesso.",
+      })
+      return { success: true }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao atualizar data: " + error.message,
+      })
+      return { success: false, error }
+    }
+  }
+
   return {
     records,
     loading,
     updateRecordStatus,
     updateRecordValue,
+    updateRecordDueDate,
     deleteRecord,
     getFilteredRecords,
     getStats,
