@@ -23,7 +23,7 @@ export function useFinancial() {
         .from('financial_records')
         .select(`
           *,
-          clients!inner(name),
+          clients!inner(name, company_name),
           plans!inner(name)
         `)
         .order('due_date', { ascending: false })
@@ -32,7 +32,7 @@ export function useFinancial() {
       
       const formattedData = data?.map(record => ({
         ...record,
-        client_name: record.clients.name,
+        client_name: record.clients.company_name || record.clients.name,
         plan_name: record.plans.name
       })) || []
       
@@ -64,7 +64,7 @@ export function useFinancial() {
         .eq('id', recordId)
         .select(`
           *,
-          clients!inner(name),
+          clients!inner(name, company_name),
           plans!inner(name)
         `)
         .single()
@@ -73,7 +73,7 @@ export function useFinancial() {
 
       const formattedData = {
         ...data,
-        client_name: data.clients.name,
+        client_name: data.clients.company_name || data.clients.name,
         plan_name: data.plans.name
       }
 
@@ -114,7 +114,7 @@ export function useFinancial() {
         .eq('id', recordId)
         .select(`
           *,
-          clients!inner(name),
+          clients!inner(name, company_name),
           plans!inner(name)
         `)
         .single()
@@ -123,7 +123,7 @@ export function useFinancial() {
 
       const formattedData = {
         ...data,
-        client_name: data.clients.name,
+        client_name: data.clients.company_name || data.clients.name,
         plan_name: data.plans.name
       }
 

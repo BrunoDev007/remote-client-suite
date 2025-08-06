@@ -47,7 +47,7 @@ export function usePlans() {
         .from('client_plans')
         .select(`
           *,
-          clients!inner(name),
+          clients!inner(name, company_name),
           plans!inner(name)
         `)
         .eq('is_active', true)
@@ -57,7 +57,7 @@ export function usePlans() {
       
       const formattedData = data?.map(item => ({
         ...item,
-        client_name: item.clients.name,
+        client_name: item.clients.company_name || item.clients.name,
         plan_name: item.plans.name
       })) || []
       
@@ -194,7 +194,7 @@ export function usePlans() {
         }])
         .select(`
           *,
-          clients!inner(name),
+          clients!inner(name, company_name),
           plans!inner(name)
         `)
         .single()
@@ -203,7 +203,7 @@ export function usePlans() {
 
       const formattedData = {
         ...data,
-        client_name: data.clients.name,
+        client_name: data.clients.company_name || data.clients.name,
         plan_name: data.plans.name
       }
 
