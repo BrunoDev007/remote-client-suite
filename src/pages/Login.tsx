@@ -84,14 +84,13 @@ export default function Login() {
           <CardHeader className="text-center">
             <CardTitle className="text-xl">Acesso ao Sistema</CardTitle>
             <CardDescription>
-              Faça login, cadastre-se ou recupere sua senha
+              Faça login ou recupere sua senha
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Cadastro</TabsTrigger>
                 <TabsTrigger value="recovery">Recuperar</TabsTrigger>
               </TabsList>
 
@@ -144,67 +143,6 @@ export default function Login() {
                 </form>
               </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome Completo</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="h-11"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">E-mail</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="h-11"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Digite sua senha"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="h-11 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full h-11 mt-6" 
-                    disabled={isLoading}
-                    variant="premium"
-                  >
-                    {isLoading ? "Cadastrando..." : "Criar Conta"}
-                    <UserPlus className="ml-2 h-4 w-4" />
-                  </Button>
-                </form>
-              </TabsContent>
 
               <TabsContent value="recovery">
                 <form onSubmit={handleRecovery} className="space-y-4">

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Search, Edit, Trash2, Monitor, Laptop, Server, Eye, Copy, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Search, Edit, Trash2, Monitor, Laptop, Server, Eye, Copy, ChevronDown, ChevronRight, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +30,8 @@ export default function RemoteAccess() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState("all")
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
+  const [viewingAccess, setViewingAccess] = useState<string | null>(null)
+  const [selectedApp, setSelectedApp] = useState<string>("")
   const [formData, setFormData] = useState({
     client_id: "",
     application_type: "AnyDesk",
@@ -322,12 +324,12 @@ export default function RemoteAccess() {
                            <Copy className="h-3 w-3" />
                          </Button>
                        </div>
-                       {access.access_password && (
-                         <div className="flex items-center gap-1">
-                           <Eye className="h-3 w-3" />
-                           <span className="font-mono">••••••</span>
-                         </div>
-                       )}
+                        {access.access_password && (
+                          <div className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            <span className="font-mono">Com senha</span>
+                          </div>
+                        )}
                        <div>
                          Cadastrado em {new Date(access.created_at).toLocaleDateString()}
                        </div>
@@ -335,27 +337,81 @@ export default function RemoteAccess() {
                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditAccess(access)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteAccess(access.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                   <div className="flex items-center gap-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setViewingAccess(viewingAccess === access.id ? null : access.id)}
+                     >
+                       <Eye className="h-4 w-4" />
+                     </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => handleEditAccess(access)}
+                     >
+                       <Edit className="h-4 w-4" />
+                     </Button>
+                     <Button
+                       variant="destructive"
+                       size="sm"
+                       onClick={() => handleDeleteAccess(access.id)}
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 </div>
+                 
+                 {/* Details view */}
+                 {viewingAccess === access.id && (
+                   <div className="mt-4 p-4 bg-muted/30 rounded-lg border">
+                     <h4 className="font-medium mb-3">Detalhes do Acesso</h4>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                       <div>
+                         <label className="font-medium text-muted-foreground">Aplicativo:</label>
+                         <p className="mt-1">{access.application_type}</p>
+                       </div>
+                       <div>
+                         <label className="font-medium text-muted-foreground">ID de Acesso:</label>
+                         <div className="flex items-center gap-2 mt-1">
+                           <span className="font-mono bg-background px-2 py-1 rounded">{access.access_id}</span>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={() => handleCopyToClipboard(access.access_id)}
+                             className="h-6 w-6 p-0"
+                           >
+                             <Copy className="h-3 w-3" />
+                           </Button>
+                         </div>
+                       </div>
+                       {access.access_password && (
+                         <div>
+                           <label className="font-medium text-muted-foreground">Senha:</label>
+                           <div className="flex items-center gap-2 mt-1">
+                             <span className="font-mono bg-background px-2 py-1 rounded">{access.access_password}</span>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleCopyToClipboard(access.access_password)}
+                               className="h-6 w-6 p-0"
+                             >
+                               <Copy className="h-3 w-3" />
+                             </Button>
+                           </div>
+                         </div>
+                       )}
+                       <div>
+                         <label className="font-medium text-muted-foreground">Computador:</label>
+                         <p className="mt-1">{access.computer_name}</p>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+           ))}
+         </div>
       )}
 
       {/* Grouped by Client View - Only show when no search is active */}
@@ -392,52 +448,100 @@ export default function RemoteAccess() {
               {expandedClients.has(client.id) && (
                 <CardContent>
                   <div className="grid gap-3">
-                    {client.accesses.map((access) => (
-                    <div key={access.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                       <div className={`w-8 h-8 ${getAppColor(access.application_type)} rounded flex items-center justify-center`}>
-                         {getAppIcon(access.application_type)}
+                     {client.accesses.map((access) => (
+                       <div key={access.id} className="space-y-2">
+                         <div className="flex items-center justify-between p-3 border rounded-lg">
+                           <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 ${getAppColor(access.application_type)} rounded flex items-center justify-center`}>
+                              {getAppIcon(access.application_type)}
+                            </div>
+                            <div>
+                              <p className="font-medium">{access.computer_name}</p>
+                              <p className="text-sm text-muted-foreground">{access.application_type}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
+                                {access.access_id}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopyToClipboard(access.access_id)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                           </div>
+                           
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setViewingAccess(viewingAccess === access.id ? null : access.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditAccess(access)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteAccess(access.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                         </div>
+                         
+                         {/* Details view for grouped access */}
+                         {viewingAccess === access.id && (
+                           <div className="ml-3 p-3 bg-muted/30 rounded border">
+                             <h5 className="font-medium mb-2 text-sm">Detalhes do Acesso</h5>
+                             <div className="grid grid-cols-2 gap-3 text-xs">
+                               <div>
+                                 <label className="font-medium text-muted-foreground">ID:</label>
+                                 <div className="flex items-center gap-1 mt-1">
+                                   <span className="font-mono bg-background px-1 py-0.5 rounded text-xs">{access.access_id}</span>
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() => handleCopyToClipboard(access.access_id)}
+                                     className="h-4 w-4 p-0"
+                                   >
+                                     <Copy className="h-2 w-2" />
+                                   </Button>
+                                 </div>
+                               </div>
+                               {access.access_password && (
+                                 <div>
+                                   <label className="font-medium text-muted-foreground">Senha:</label>
+                                   <div className="flex items-center gap-1 mt-1">
+                                     <span className="font-mono bg-background px-1 py-0.5 rounded text-xs">{access.access_password}</span>
+                                     <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       onClick={() => handleCopyToClipboard(access.access_password)}
+                                       className="h-4 w-4 p-0"
+                                     >
+                                       <Copy className="h-2 w-2" />
+                                     </Button>
+                                   </div>
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                         )}
                        </div>
-                       <div>
-                         <p className="font-medium">{access.computer_name}</p>
-                         <p className="text-sm text-muted-foreground">{access.application_type}</p>
-                       </div>
-                       <div className="flex items-center gap-2">
-                         <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
-                           {access.access_id}
-                         </span>
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => handleCopyToClipboard(access.access_id)}
-                           className="h-6 w-6 p-0"
-                         >
-                           <Copy className="h-3 w-3" />
-                         </Button>
-                       </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditAccess(access)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteAccess(access.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              )}
+                     ))}
+                   </div>
+                 </CardContent>
+               )}
             </Card>
           ))}
         </div>

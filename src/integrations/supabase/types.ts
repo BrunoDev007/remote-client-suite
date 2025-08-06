@@ -19,11 +19,13 @@ export type Database = {
           client_id: string
           contract_url: string | null
           created_at: string
+          end_date: string | null
           id: string
           is_active: boolean
           payment_date: string
           payment_method: string
           plan_id: string
+          start_date: string | null
           updated_at: string
           value: number
         }
@@ -31,11 +33,13 @@ export type Database = {
           client_id: string
           contract_url?: string | null
           created_at?: string
+          end_date?: string | null
           id?: string
           is_active?: boolean
           payment_date: string
           payment_method: string
           plan_id: string
+          start_date?: string | null
           updated_at?: string
           value: number
         }
@@ -43,11 +47,13 @@ export type Database = {
           client_id?: string
           contract_url?: string | null
           created_at?: string
+          end_date?: string | null
           id?: string
           is_active?: boolean
           payment_date?: string
           payment_method?: string
           plan_id?: string
+          start_date?: string | null
           updated_at?: string
           value?: number
         }
