@@ -40,10 +40,10 @@ export default function Dashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true)
 
-      // Get financial data
+      // Get financial data with due date
       const { data: financialData } = await supabase
         .from('financial_records')
-        .select('value, status')
+        .select('value, status, due_date')
 
       // Get recent remote access
       const { data: recentAccess } = await supabase
@@ -59,12 +59,18 @@ export default function Dashboard() {
       let totalReceivable = 0
       let paidAmount = 0
       let overdueAmount = 0
+      const today = new Date().toISOString().split('T')[0]
 
       financialData?.forEach(record => {
         if (record.status === 'quitado') {
           paidAmount += parseFloat(record.value.toString())
         } else if (record.status === 'pendente') {
-          totalReceivable += parseFloat(record.value.toString())
+          // Check if it's overdue
+          if (record.due_date < today) {
+            overdueAmount += parseFloat(record.value.toString())
+          } else {
+            totalReceivable += parseFloat(record.value.toString())
+          }
         } else if (record.status === 'atrasado') {
           overdueAmount += parseFloat(record.value.toString())
         }
