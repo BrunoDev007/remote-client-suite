@@ -311,7 +311,7 @@ export default function RemoteAccess() {
       </Card>
 
       {/* Access List - Only show when there's an active search */}
-      {(searchTerm || selectedClient !== "all") && (
+      {(searchTerm || selectedClient !== "all" || selectedApp !== "all") && (
         <div className="space-y-4">
           {filteredAccesses.map((access) => (
             <Card key={access.id} className="hover:shadow-card transition-smooth">
