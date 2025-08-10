@@ -31,7 +31,7 @@ export default function RemoteAccess() {
   const [selectedClient, setSelectedClient] = useState("all")
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
   const [viewingAccess, setViewingAccess] = useState<string | null>(null)
-  const [selectedApp, setSelectedApp] = useState<string>("")
+  const [selectedApp, setSelectedApp] = useState<string>("all")
   const [formData, setFormData] = useState({
     client_id: "",
     application_type: "AnyDesk",
@@ -126,11 +126,16 @@ export default function RemoteAccess() {
   const filteredAccesses = getFilteredAccesses({
     searchTerm,
     selectedClient
-  })
+  }).filter(access => 
+    selectedApp === "all" || access.application_type === selectedApp
+  )
 
   const accessesByClient = clients.map(client => ({
     ...client,
-    accesses: accesses.filter(access => access.client_id === client.id)
+    accesses: accesses.filter(access => 
+      access.client_id === client.id && 
+      (selectedApp === "all" || access.application_type === selectedApp)
+    )
   })).filter(client => client.accesses.length > 0)
 
   if (loading) {
@@ -252,7 +257,7 @@ export default function RemoteAccess() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -277,11 +282,26 @@ export default function RemoteAccess() {
               </SelectContent>
             </Select>
 
+            <Select value={selectedApp} onValueChange={setSelectedApp}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por aplicativo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os aplicativos</SelectItem>
+                {aplicativosRemoto.map(app => (
+                  <SelectItem key={app} value={app}>
+                    {app}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Button 
               variant="outline" 
               onClick={() => {
                 setSearchTerm("")
                 setSelectedClient("all")
+                setSelectedApp("all")
               }}
             >
               Limpar Filtros
@@ -291,7 +311,7 @@ export default function RemoteAccess() {
       </Card>
 
       {/* Access List - Only show when there's an active search */}
-      {(searchTerm || selectedClient !== "all") && (
+      {(searchTerm || selectedClient !== "all" || selectedApp !== "all") && (
         <div className="space-y-4">
           {filteredAccesses.map((access) => (
             <Card key={access.id} className="hover:shadow-card transition-smooth">
@@ -415,7 +435,7 @@ export default function RemoteAccess() {
       )}
 
       {/* Grouped by Client View - Only show when no search is active */}
-      {!searchTerm && selectedClient === "all" && (
+      {!searchTerm && selectedClient === "all" && selectedApp === "all" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold text-foreground">Acessos por Cliente</h2>
           {accessesByClient.map((client) => (
