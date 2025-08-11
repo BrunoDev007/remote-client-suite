@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2 } from "lucide-react"
+import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2, Printer, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinancial } from "@/hooks/useFinancial"
@@ -145,22 +146,83 @@ export default function Financial() {
     )
   }
 
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportData, setReportData] = useState<any[]>([])
+
   const generateReport = () => {
-    const reportData = filteredRecords.map(record => ({
+    const data = filteredRecords.map(record => ({
       Cliente: record.client_name,
       Plano: record.plan_name,
       Valor: `R$ ${Number(record.value).toFixed(2)}`,
       Vencimento: new Date(record.due_date).toLocaleDateString(),
-      Status: record.status,
+      Status: record.status === 'quitado' ? 'Quitado' : record.status === 'pendente' ? 'Pendente' : 'Em Atraso',
       Pagamento: record.payment_date ? new Date(record.payment_date).toLocaleDateString() : "-",
       "Forma de Pagamento": record.payment_method
     }))
     
-    console.log("Relatório gerado:", reportData)
-    toast({
-      title: "Relatório gerado!",
-      description: "O relatório foi gerado com sucesso. Verifique o console.",
-    })
+    setReportData(data)
+    setShowReportDialog(true)
+  }
+
+  const downloadPDF = async () => {
+    const { jsPDF } = await import('jspdf')
+    const html2canvas = (await import('html2canvas')).default
+    
+    const element = document.getElementById('report-content')
+    if (!element) return
+    
+    const canvas = await html2canvas(element)
+    const imgData = canvas.toDataURL('image/png')
+    
+    const pdf = new jsPDF()
+    const imgWidth = 210
+    const pageHeight = 295
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    let heightLeft = imgHeight
+    
+    let position = 0
+    
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+    
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+    
+    pdf.save('relatorio-financeiro.pdf')
+  }
+
+  const printReport = () => {
+    const element = document.getElementById('report-content')
+    if (!element) return
+    
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Relatório Financeiro</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            h1 { color: #333; }
+            .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+            .stat-card { text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          ${element.innerHTML}
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    printWindow.print()
   }
 
   return (
@@ -503,6 +565,104 @@ export default function Financial() {
                 Salvar Data
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Report Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Relatório Financeiro</DialogTitle>
+            <DialogDescription>
+              Visualize e exporte o relatório dos registros filtrados
+            </DialogDescription>
+          </DialogHeader>
+
+          <div id="report-content" className="space-y-6">
+            <div className="text-center border-b pb-4">
+              <h1 className="text-2xl font-bold">Relatório Financeiro</h1>
+              <p className="text-muted-foreground">Gerado em {new Date().toLocaleDateString()}</p>
+            </div>
+
+            {/* Report Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="stat-card text-center p-4 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Total de Registros</p>
+                <p className="text-2xl font-bold">{reportData.length}</p>
+              </div>
+              <div className="stat-card text-center p-4 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Valor Total</p>
+                <p className="text-2xl font-bold">
+                  R$ {reportData.reduce((sum, record) => {
+                    const value = parseFloat(record.Valor.replace('R$ ', '').replace(',', '.'))
+                    return sum + (isNaN(value) ? 0 : value)
+                  }, 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="stat-card text-center p-4 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Quitados</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {reportData.filter(r => r.Status === 'Quitado').length}
+                </p>
+              </div>
+              <div className="stat-card text-center p-4 border rounded-lg">
+                <p className="text-sm text-muted-foreground">Pendentes</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {reportData.filter(r => r.Status === 'Pendente' || r.Status === 'Em Atraso').length}
+                </p>
+              </div>
+            </div>
+
+            {/* Report Table */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Pagamento</TableHead>
+                  <TableHead>Forma Pagamento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportData.map((record, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{record.Cliente}</TableCell>
+                    <TableCell>{record.Plano}</TableCell>
+                    <TableCell className="font-medium">{record.Valor}</TableCell>
+                    <TableCell>{record.Vencimento}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        record.Status === 'Quitado' ? 'bg-green-100 text-green-800' :
+                        record.Status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {record.Status}
+                      </span>
+                    </TableCell>
+                    <TableCell>{record.Pagamento}</TableCell>
+                    <TableCell>{record["Forma de Pagamento"]}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowReportDialog(false)}>
+              Fechar
+            </Button>
+            <Button variant="outline" onClick={printReport}>
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </Button>
+            <Button onClick={downloadPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              Baixar PDF
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

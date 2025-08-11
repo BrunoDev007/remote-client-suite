@@ -160,8 +160,12 @@ export function useFinancial() {
         filters.statusFilter === "todos" || 
         record.status === filters.statusFilter
       
-      const matchesDate = !filters.dateFilter || 
-        record.due_date.includes(filters.dateFilter)
+      const matchesDate = !filters.dateFilter || (() => {
+        const recordDate = new Date(record.due_date)
+        const filterDate = new Date(filters.dateFilter + "-01")
+        return recordDate.getFullYear() === filterDate.getFullYear() && 
+               recordDate.getMonth() === filterDate.getMonth()
+      })()
       
       return matchesSearch && matchesStatus && matchesDate
     })
