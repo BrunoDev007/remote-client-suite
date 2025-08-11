@@ -38,11 +38,16 @@ export function useFinancial() {
       const dueDate = new Date(year, month - 1, 10).toISOString().split('T')[0]
 
       // Verificar quais registros já existem para este mês
+      const startMonth = month.toString().padStart(2, '0')
+      const nextMonth = month === 12 ? 1 : month + 1
+      const nextYear = month === 12 ? year + 1 : year
+      const endMonth = nextMonth.toString().padStart(2, '0')
+
       const { data: existingRecords, error: existingError } = await supabase
         .from('financial_records')
         .select('client_plan_id')
-        .gte('due_date', `${year}-${month.toString().padStart(2, '0')}-01`)
-        .lt('due_date', `${year}-${(month + 1).toString().padStart(2, '0')}-01`)
+        .gte('due_date', `${year}-${startMonth}-01`)
+        .lt('due_date', `${nextYear}-${endMonth}-01`)
 
       if (existingError) throw existingError
 
