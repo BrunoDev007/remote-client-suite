@@ -43,6 +43,8 @@ export default function Financial() {
     reason: ""
   })
   const [newDueDate, setNewDueDate] = useState("")
+  const [showReportDialog, setShowReportDialog] = useState(false)
+  const [reportData, setReportData] = useState<any[]>([])
 
   const { toast } = useToast()
 
@@ -146,8 +148,6 @@ export default function Financial() {
     )
   }
 
-  const [showReportDialog, setShowReportDialog] = useState(false)
-  const [reportData, setReportData] = useState<any[]>([])
 
   const generateReport = () => {
     const data = filteredRecords.map(record => ({
