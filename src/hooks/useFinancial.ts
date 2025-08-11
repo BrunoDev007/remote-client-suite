@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -16,6 +17,65 @@ export function useFinancial() {
   useEffect(() => {
     fetchFinancialRecords()
   }, [])
+
+  const generateMonthlyRecords = async (year: number, month: number) => {
+    try {
+      // Buscar todos os planos ativos dos clientes
+      const { data: activePlans, error: plansError } = await supabase
+        .from('client_plans')
+        .select(`
+          *,
+          clients!inner(id, name, company_name),
+          plans!inner(id, name, value)
+        `)
+        .eq('is_active', true)
+
+      if (plansError) throw plansError
+
+      if (!activePlans || activePlans.length === 0) return
+
+      // Data de vencimento para o mês selecionado (sempre dia do pagamento ou dia 10 como padrão)
+      const dueDate = new Date(year, month - 1, 10).toISOString().split('T')[0]
+
+      // Verificar quais registros já existem para este mês
+      const { data: existingRecords, error: existingError } = await supabase
+        .from('financial_records')
+        .select('client_plan_id')
+        .gte('due_date', `${year}-${month.toString().padStart(2, '0')}-01`)
+        .lt('due_date', `${year}-${(month + 1).toString().padStart(2, '0')}-01`)
+
+      if (existingError) throw existingError
+
+      const existingPlanIds = new Set(existingRecords?.map(r => r.client_plan_id) || [])
+
+      // Criar registros para planos que não têm registro neste mês
+      const recordsToCreate = activePlans
+        .filter(plan => !existingPlanIds.has(plan.id))
+        .map(plan => ({
+          client_plan_id: plan.id,
+          client_id: plan.client_id,
+          plan_id: plan.plan_id,
+          value: plan.value,
+          original_value: plan.value,
+          due_date: dueDate,
+          status: 'pendente',
+          payment_method: plan.payment_method || 'Não informado'
+        }))
+
+      if (recordsToCreate.length > 0) {
+        const { error: insertError } = await supabase
+          .from('financial_records')
+          .insert(recordsToCreate)
+
+        if (insertError) throw insertError
+
+        console.log(`${recordsToCreate.length} novos registros financeiros criados para ${month}/${year}`)
+      }
+
+    } catch (error: any) {
+      console.error('Erro ao gerar registros mensais:', error)
+    }
+  }
 
   const fetchFinancialRecords = async () => {
     try {
@@ -146,11 +206,20 @@ export function useFinancial() {
     }
   }
 
-  const getFilteredRecords = (filters: {
+  const getFilteredRecords = async (filters: {
     searchTerm?: string
     statusFilter?: string
     dateFilter?: string
   }) => {
+    // Se há filtro de data, gerar registros para o mês se necessário
+    if (filters.dateFilter) {
+      const [year, month] = filters.dateFilter.split('-').map(Number)
+      await generateMonthlyRecords(year, month)
+      
+      // Recarregar os registros após gerar novos
+      await fetchFinancialRecords()
+    }
+
     return records.filter(record => {
       const matchesSearch = !filters.searchTerm || 
         record.client_name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -266,6 +335,7 @@ export function useFinancial() {
     deleteRecord,
     getFilteredRecords,
     getStats,
-    refetchRecords: fetchFinancialRecords
+    refetchRecords: fetchFinancialRecords,
+    generateMonthlyRecords
   }
 }

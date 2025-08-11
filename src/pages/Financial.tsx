@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2, Printer, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,8 +45,23 @@ export default function Financial() {
   const [newDueDate, setNewDueDate] = useState("")
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [reportData, setReportData] = useState<any[]>([])
+  const [filteredRecords, setFilteredRecords] = useState<any[]>([])
 
   const { toast } = useToast()
+
+  // Atualizar registros filtrados quando os filtros ou registros mudarem
+  useEffect(() => {
+    const updateFilteredRecords = async () => {
+      const filtered = await getFilteredRecords({
+        searchTerm,
+        statusFilter,
+        dateFilter
+      })
+      setFilteredRecords(filtered)
+    }
+    
+    updateFilteredRecords()
+  }, [searchTerm, statusFilter, dateFilter, records, getFilteredRecords])
 
   const handleQuitar = async (recordId: string) => {
     await updateRecordStatus(recordId, 'quitado')
@@ -130,12 +145,6 @@ export default function Financial() {
     }
   }
 
-  const filteredRecords = getFilteredRecords({
-    searchTerm,
-    statusFilter,
-    dateFilter
-  })
-
   const stats = getStats()
 
   if (loading) {
@@ -147,7 +156,6 @@ export default function Financial() {
       </div>
     )
   }
-
 
   const generateReport = () => {
     const data = filteredRecords.map(record => ({
