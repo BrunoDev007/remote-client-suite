@@ -28,8 +28,9 @@ export default function Financial() {
     updateRecordValue, 
     updateRecordDueDate,
     deleteRecord,
-    getFilteredRecords, 
-    getStats 
+    getStats,
+    generateMonthlyRecords,
+    refetchRecords
   } = useFinancial()
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -49,19 +50,43 @@ export default function Financial() {
 
   const { toast } = useToast()
 
-  // Atualizar registros filtrados quando os filtros ou registros mudarem
+  // Garantir geração de registros do mês ao mudar o filtro de data
   useEffect(() => {
-    const updateFilteredRecords = async () => {
-      const filtered = await getFilteredRecords({
-        searchTerm,
-        statusFilter,
-        dateFilter
-      })
-      setFilteredRecords(filtered)
+    const run = async () => {
+      if (!dateFilter) return
+      const [year, month] = dateFilter.split('-').map(Number)
+      await generateMonthlyRecords(year, month)
+      await refetchRecords()
     }
-    
-    updateFilteredRecords()
-  }, [searchTerm, statusFilter, dateFilter, records, getFilteredRecords])
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFilter])
+
+  // Filtragem pura em memória (sem efeitos colaterais)
+  useEffect(() => {
+    const term = searchTerm.toLowerCase()
+    const filtered = records.filter((record: any) => {
+      const matchesSearch =
+        !term ||
+        record.client_name.toLowerCase().includes(term) ||
+        record.plan_name.toLowerCase().includes(term)
+
+      const matchesStatus =
+        !statusFilter || statusFilter === "todos" || record.status === statusFilter
+
+      const matchesDate =
+        !dateFilter ||
+        (() => {
+          const rd = new Date(record.due_date)
+          const [y, m] = dateFilter.split("-").map(Number)
+          return rd.getFullYear() === y && rd.getMonth() === m - 1
+        })()
+
+      return matchesSearch && matchesStatus && matchesDate
+    })
+
+    setFilteredRecords(filtered)
+  }, [searchTerm, statusFilter, dateFilter, records])
 
   const handleQuitar = async (recordId: string) => {
     await updateRecordStatus(recordId, 'quitado')
