@@ -14,6 +14,8 @@ export interface TechnicalReport {
   data: Record<string, any>;
   createdAt: string;
   status?: string;
+  client_id: string;
+  client_name: string;
 }
 
 export default function TechnicalReports() {
@@ -22,24 +24,44 @@ export default function TechnicalReports() {
     return saved ? JSON.parse(saved) : [];
   });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState<TechnicalReport | null>(null);
   const { toast } = useToast();
 
   const handleSaveReport = (reportData: Omit<TechnicalReport, 'id' | 'createdAt'>) => {
-    const newReport: TechnicalReport = {
-      ...reportData,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
+    if (editingReport) {
+      // Update existing report
+      const updatedReports = reports.map(report =>
+        report.id === editingReport.id
+          ? { ...reportData, id: editingReport.id, createdAt: editingReport.createdAt }
+          : report
+      );
+      setReports(updatedReports);
+      localStorage.setItem('technical-reports', JSON.stringify(updatedReports));
+      
+      toast({
+        title: "Relatório atualizado",
+        description: "O relatório técnico foi atualizado com sucesso.",
+      });
+    } else {
+      // Create new report
+      const newReport: TechnicalReport = {
+        ...reportData,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      };
 
-    const updatedReports = [...reports, newReport];
-    setReports(updatedReports);
-    localStorage.setItem('technical-reports', JSON.stringify(updatedReports));
+      const updatedReports = [...reports, newReport];
+      setReports(updatedReports);
+      localStorage.setItem('technical-reports', JSON.stringify(updatedReports));
+      
+      toast({
+        title: "Relatório salvo",
+        description: "O relatório técnico foi salvo com sucesso.",
+      });
+    }
     
     setIsFormOpen(false);
-    toast({
-      title: "Relatório salvo",
-      description: "O relatório técnico foi salvo com sucesso.",
-    });
+    setEditingReport(null);
   };
 
   const handleDeleteReport = (id: string) => {
@@ -53,6 +75,11 @@ export default function TechnicalReports() {
     });
   };
 
+  const handleEditReport = (report: TechnicalReport) => {
+    setEditingReport(report);
+    setIsFormOpen(true);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -64,7 +91,12 @@ export default function TechnicalReports() {
           </p>
         </div>
         
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <Dialog open={isFormOpen} onOpenChange={(open) => {
+          setIsFormOpen(open);
+          if (!open) {
+            setEditingReport(null);
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-primary text-primary-foreground shadow-glow hover:shadow-elegant transition-smooth">
               <Plus className="h-4 w-4 mr-2" />
@@ -73,12 +105,19 @@ export default function TechnicalReports() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Novo Relatório Técnico</DialogTitle>
+              <DialogTitle>{editingReport ? 'Editar Relatório Técnico' : 'Novo Relatório Técnico'}</DialogTitle>
               <DialogDescription>
                 Selecione o tipo de relatório e preencha as informações necessárias.
               </DialogDescription>
             </DialogHeader>
-            <ReportForm onSave={handleSaveReport} onCancel={() => setIsFormOpen(false)} />
+            <ReportForm 
+              report={editingReport} 
+              onSave={handleSaveReport} 
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingReport(null);
+              }} 
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -145,6 +184,7 @@ export default function TechnicalReports() {
       <ReportsList 
         reports={reports} 
         onDelete={handleDeleteReport}
+        onEdit={handleEditReport}
       />
     </div>
   );

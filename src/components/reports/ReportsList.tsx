@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Eye, Download, Trash2, FileText, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Eye, Download, Trash2, FileText, AlertCircle, CheckCircle, Clock, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +13,10 @@ import { generatePDF } from "@/utils/pdfGenerator";
 interface ReportsListProps {
   reports: TechnicalReport[];
   onDelete: (id: string) => void;
+  onEdit: (report: TechnicalReport) => void;
 }
 
-export function ReportsList({ reports, onDelete }: ReportsListProps) {
+export function ReportsList({ reports, onDelete, onEdit }: ReportsListProps) {
   const [selectedReport, setSelectedReport] = useState<TechnicalReport | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
@@ -85,7 +86,7 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
                     <Badge variant="outline">{getReportTypeLabel(report.type)}</Badge>
                   </div>
                   <CardDescription>
-                    Criado em {format(new Date(report.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    Cliente: {report.client_name} | Criado em {format(new Date(report.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </CardDescription>
                   {report.status && (
                     <div className="flex items-center gap-2">
@@ -101,6 +102,14 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
                     onClick={() => handleViewReport(report)}
                   >
                     <Eye className="h-4 w-4" />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(report)}
+                  >
+                    <Edit className="h-4 w-4" />
                   </Button>
                   
                   <Button
