@@ -47,7 +47,7 @@ export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
       type: reportType,
       title,
       client_id: clientId,
-      client_name: selectedClient?.name || '',
+      client_name: selectedClient?.company_name || selectedClient?.fantasy_name || selectedClient?.name || '',
       data: formData,
       status: formData.status
     };
@@ -91,7 +91,7 @@ export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
                 <SelectContent>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                      {client.company_name || client.fantasy_name || client.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
