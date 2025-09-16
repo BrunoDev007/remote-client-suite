@@ -170,7 +170,7 @@ export default function Financial() {
     }
   }
 
-  const stats = getStats()
+  const stats = getStats(filteredRecords)
 
   if (loading) {
     return (

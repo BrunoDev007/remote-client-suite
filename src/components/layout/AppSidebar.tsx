@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BarChart3, Users, CreditCard, DollarSign, Monitor, LogOut, Menu, Settings, FileText } from "lucide-react"
+import { BarChart3, Users, CreditCard, DollarSign, Monitor, LogOut, Menu, Settings, FileText, Wrench } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -24,6 +24,7 @@ const menuItems = [
   { title: "Financeiro", url: "/financial", icon: DollarSign },
   { title: "Acesso Remoto", url: "/remote-access", icon: Monitor },
   { title: "Relatórios Técnicos", url: "/technical-reports", icon: FileText },
+  { title: "Revisão Técnica", url: "/technical-review", icon: Wrench },
 ]
 
 export function AppSidebar() {

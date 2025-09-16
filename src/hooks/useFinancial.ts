@@ -270,11 +270,12 @@ export function useFinancial() {
     }
   }
 
-  const getStats = () => {
+  const getStats = (filteredRecords?: FinancialRecord[]) => {
     const now = new Date()
     const today = now.toISOString().split('T')[0]
     
-    const recordsWithStatus = records.map(record => {
+    const recordsToUse = filteredRecords || records
+    const recordsWithStatus = recordsToUse.map(record => {
       if (record.status === 'pendente' && record.due_date < today) {
         return { ...record, status: 'atrasado' as const }
       }
@@ -282,7 +283,7 @@ export function useFinancial() {
     })
 
     return {
-      total: records.length,
+      total: recordsToUse.length,
       quitados: recordsWithStatus.filter(r => r.status === 'quitado').length,
       pendentes: recordsWithStatus.filter(r => r.status === 'pendente').length,
       atrasados: recordsWithStatus.filter(r => r.status === 'atrasado' || (r.status === 'pendente' && r.due_date < today)).length,

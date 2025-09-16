@@ -12,6 +12,7 @@ import Plans from "./pages/Plans";
 import Financial from "./pages/Financial";
 import RemoteAccess from "./pages/RemoteAccess";
 import TechnicalReports from "./pages/TechnicalReports";
+import TechnicalReview from "./pages/TechnicalReview";
 import { AppLayout } from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/financial" element={<ProtectedRoute><AppLayout><Financial /></AppLayout></ProtectedRoute>} />
             <Route path="/remote-access" element={<ProtectedRoute><AppLayout><RemoteAccess /></AppLayout></ProtectedRoute>} />
             <Route path="/technical-reports" element={<ProtectedRoute><AppLayout><TechnicalReports /></AppLayout></ProtectedRoute>} />
+            <Route path="/technical-review" element={<ProtectedRoute><AppLayout><TechnicalReview /></AppLayout></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
