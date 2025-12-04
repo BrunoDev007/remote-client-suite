@@ -41,6 +41,7 @@ export default function TechnicalReview() {
     startDate: '',
     endDate: '',
     nextMaintenanceDate: '',
+    monthsUntilNext: '',
     observations: ''
   })
 
@@ -67,6 +68,7 @@ export default function TechnicalReview() {
       startDate: '',
       endDate: '',
       nextMaintenanceDate: '',
+      monthsUntilNext: '',
       observations: ''
     })
   }
@@ -133,6 +135,7 @@ export default function TechnicalReview() {
       startDate: review.startDate,
       endDate: review.endDate,
       nextMaintenanceDate: review.nextMaintenanceDate || '',
+      monthsUntilNext: '',
       observations: review.observations || ''
     })
     setIsFormOpen(true)
@@ -289,15 +292,46 @@ export default function TechnicalReview() {
               </div>
 
               {shouldShowNextMaintenanceDate && (
-                <div className="space-y-2 col-span-2">
-                  <Label htmlFor="nextMaintenanceDate">Data da Próxima Manutenção</Label>
-                  <Input
-                    id="nextMaintenanceDate"
-                    type="date"
-                    value={formData.nextMaintenanceDate}
-                    onChange={(e) => setFormData({...formData, nextMaintenanceDate: e.target.value})}
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="monthsUntilNext">Próxima Limpeza em (meses) *</Label>
+                    <Select 
+                      value={formData.monthsUntilNext} 
+                      onValueChange={(value) => {
+                        const months = parseInt(value)
+                        let nextDate = ''
+                        if (formData.endDate && months) {
+                          const endDate = new Date(formData.endDate)
+                          endDate.setMonth(endDate.getMonth() + months)
+                          nextDate = endDate.toISOString().split('T')[0]
+                        }
+                        setFormData({...formData, monthsUntilNext: value, nextMaintenanceDate: nextDate})
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
+                          <SelectItem key={month} value={month.toString()}>
+                            {month} {month === 1 ? 'mês' : 'meses'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nextMaintenanceDate">Data da Próxima Manutenção</Label>
+                    <Input
+                      id="nextMaintenanceDate"
+                      type="date"
+                      value={formData.nextMaintenanceDate}
+                      readOnly
+                      className="bg-muted"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="space-y-2 col-span-2">
