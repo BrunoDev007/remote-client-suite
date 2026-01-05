@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2, Printer, Download } from "lucide-react"
+import { Search, DollarSign, CheckCircle, XCircle, AlertCircle, Edit2, FileDown, Calendar, Filter, Trash2, Printer, Download, Calculator } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinancial } from "@/hooks/useFinancial"
+import { LateFeeCalculator } from "@/components/financial/LateFeeCalculator"
 
 const statusOptions = [
   { value: "todos", label: "Todos" },
@@ -47,6 +48,7 @@ export default function Financial() {
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [reportData, setReportData] = useState<any[]>([])
   const [filteredRecords, setFilteredRecords] = useState<any[]>([])
+  const [showLateFeeCalculator, setShowLateFeeCalculator] = useState(false)
 
   const { toast } = useToast()
 
@@ -266,10 +268,16 @@ export default function Financial() {
           <p className="text-muted-foreground">Controle de pagamentos e relatórios financeiros</p>
         </div>
         
-        <Button onClick={generateReport} variant="outline">
-          <FileDown className="h-4 w-4 mr-2" />
-          Gerar Relatório
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowLateFeeCalculator(true)} variant="outline">
+            <Calculator className="h-4 w-4 mr-2" />
+            Calcular por Atraso
+          </Button>
+          <Button onClick={generateReport} variant="outline">
+            <FileDown className="h-4 w-4 mr-2" />
+            Gerar Relatório
+          </Button>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -697,6 +705,22 @@ export default function Financial() {
               Baixar PDF
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Late Fee Calculator Dialog */}
+      <Dialog open={showLateFeeCalculator} onOpenChange={setShowLateFeeCalculator}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Calcular por Atraso
+            </DialogTitle>
+            <DialogDescription>
+              Calcule multa e mora para pagamentos em atraso
+            </DialogDescription>
+          </DialogHeader>
+          <LateFeeCalculator />
         </DialogContent>
       </Dialog>
     </div>

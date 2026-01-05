@@ -1,1 +1,4 @@
 project_id = "iqxorxuhupbfgbrbsguj"
+
+[functions.calculate-late-fee]
+verify_jwt = false
