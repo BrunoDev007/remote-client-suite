@@ -108,13 +108,12 @@ serve(async (req) => {
       } else if (futureRecords && futureRecords.length > 0) {
         for (const record of futureRecords) {
           const recordDate = new Date(record.due_date);
-          // Manter o mesmo dia do mês da nova data
-          const newRecordDate = new Date(
-            recordDate.getUTCFullYear(),
-            recordDate.getUTCMonth(),
-            Math.min(newDay, new Date(recordDate.getUTCFullYear(), recordDate.getUTCMonth() + 1, 0).getUTCDate())
-          );
-          const newRecordDateStr = newRecordDate.toISOString().split('T')[0];
+          // Manter o mesmo dia do mês da nova data (cálculo direto em UTC)
+          const year = recordDate.getUTCFullYear();
+          const month = recordDate.getUTCMonth();
+          const lastDayOfMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+          const adjustedDay = Math.min(newDay, lastDayOfMonth);
+          const newRecordDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(adjustedDay).padStart(2, '0')}`;
 
           const { error: updateFutureError } = await supabase
             .from('financial_records')
