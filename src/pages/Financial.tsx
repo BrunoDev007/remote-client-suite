@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
 import { useFinancial } from "@/hooks/useFinancial"
 import { LateFeeCalculator } from "@/components/financial/LateFeeCalculator"
+import { BulkDueDateDialog } from "@/components/financial/BulkDueDateDialog"
 
 const statusOptions = [
   { value: "todos", label: "Todos" },
@@ -38,13 +39,12 @@ export default function Financial() {
   const [statusFilter, setStatusFilter] = useState("todos")
   const [dateFilter, setDateFilter] = useState("")
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [isDateDialogOpen, setIsDateDialogOpen] = useState(false)
+  const [isBulkDateDialogOpen, setIsBulkDateDialogOpen] = useState(false)
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editFormData, setEditFormData] = useState({
     value: 0,
     reason: ""
   })
-  const [newDueDate, setNewDueDate] = useState("")
   const [showReportDialog, setShowReportDialog] = useState(false)
   const [reportData, setReportData] = useState<any[]>([])
   const [filteredRecords, setFilteredRecords] = useState<any[]>([])
@@ -126,24 +126,11 @@ export default function Financial() {
 
   const openDateDialog = (record: any) => {
     setEditingRecord(record)
-    setNewDueDate(record.due_date)
-    setIsDateDialogOpen(true)
+    setIsBulkDateDialogOpen(true)
   }
 
-  const handleEditDueDate = async () => {
-    if (!editingRecord || !newDueDate) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Selecione uma nova data de vencimento.",
-      })
-      return
-    }
-
-    await updateRecordDueDate(editingRecord.id, newDueDate)
-    setIsDateDialogOpen(false)
-    setEditingRecord(null)
-    setNewDueDate("")
+  const handleDateDialogSuccess = async () => {
+    await refetchRecords()
   }
 
   const getStatusBadge = (status: string) => {
@@ -567,48 +554,19 @@ export default function Financial() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Due Date Dialog */}
-      <Dialog open={isDateDialogOpen} onOpenChange={setIsDateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Data de Vencimento</DialogTitle>
-            <DialogDescription>
-              Altere a data de vencimento do título
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-             <div className="space-y-2">
-               <Label>Cliente</Label>
-               <Input value={editingRecord?.client_name || ""} disabled />
-             </div>
-
-             <div className="space-y-2">
-               <Label>Data Atual</Label>
-               <Input value={editingRecord ? new Date(editingRecord.due_date).toLocaleDateString() : ""} disabled />
-             </div>
-
-             <div className="space-y-2">
-               <Label htmlFor="newDueDate">Nova Data de Vencimento *</Label>
-               <Input
-                 id="newDueDate"
-                 type="date"
-                 value={newDueDate}
-                 onChange={(e) => setNewDueDate(e.target.value)}
-               />
-             </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsDateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleEditDueDate} variant="premium">
-                Salvar Data
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk Due Date Dialog */}
+      <BulkDueDateDialog
+        open={isBulkDateDialogOpen}
+        onOpenChange={setIsBulkDateDialogOpen}
+        record={editingRecord ? {
+          id: editingRecord.id,
+          client_plan_id: editingRecord.client_plan_id,
+          client_name: editingRecord.client_name,
+          due_date: editingRecord.due_date,
+          status: editingRecord.status
+        } : null}
+        onSuccess={handleDateDialogSuccess}
+      />
 
       {/* Report Dialog */}
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
