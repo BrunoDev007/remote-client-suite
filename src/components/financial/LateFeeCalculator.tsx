@@ -1,19 +1,53 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Eraser, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Calculator, Eraser, AlertCircle, CheckCircle2, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLateFeeCalculator, LateFeeResult } from '@/hooks/useLateFeeCalculator';
+import { useClients } from '@/hooks/useClients';
+import { useClientPendingRecords, ClientPendingRecord } from '@/hooks/useClientPendingRecords';
 
 export function LateFeeCalculator() {
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [selectedRecordId, setSelectedRecordId] = useState<string>('');
   const [valorDevido, setValorDevido] = useState<string>('');
   const [dataVencimento, setDataVencimento] = useState<string>('');
   const [dataPagamento, setDataPagamento] = useState<string>('');
   const [diasAtraso, setDiasAtraso] = useState<number>(0);
+  const [manualMode, setManualMode] = useState(false);
 
   const { calculate, reset, result, isLoading, error } = useLateFeeCalculator();
+  const { clients, loading: loadingClients } = useClients();
+  const { records: pendingRecords, fetchPendingRecords, isLoading: loadingRecords, reset: resetRecords } = useClientPendingRecords();
+
+  // Buscar registros pendentes quando cliente é selecionado
+  useEffect(() => {
+    if (selectedClientId) {
+      fetchPendingRecords(selectedClientId);
+      setSelectedRecordId('');
+      if (!manualMode) {
+        setValorDevido('');
+        setDataVencimento('');
+      }
+    } else {
+      resetRecords();
+    }
+  }, [selectedClientId]);
+
+  // Preencher campos quando um registro é selecionado
+  useEffect(() => {
+    if (selectedRecordId && pendingRecords.length > 0) {
+      const record = pendingRecords.find(r => r.id === selectedRecordId);
+      if (record) {
+        setValorDevido(record.value.toFixed(2).replace('.', ','));
+        setDataVencimento(record.due_date);
+        setManualMode(false);
+      }
+    }
+  }, [selectedRecordId, pendingRecords]);
 
   // Calcular dias em atraso automaticamente
   useEffect(() => {
@@ -47,11 +81,22 @@ export function LateFeeCalculator() {
   };
 
   const handleClear = () => {
+    setSelectedClientId('');
+    setSelectedRecordId('');
     setValorDevido('');
     setDataVencimento('');
     setDataPagamento('');
     setDiasAtraso(0);
+    setManualMode(false);
     reset();
+    resetRecords();
+  };
+
+  const handleManualInput = () => {
+    setManualMode(true);
+    setSelectedClientId('');
+    setSelectedRecordId('');
+    resetRecords();
   };
 
   const formatCurrency = (value: number) => {
@@ -65,6 +110,81 @@ export function LateFeeCalculator() {
 
   return (
     <div className="space-y-6">
+      {/* Seleção de Cliente */}
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Selecionar Cliente (Opcional)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Select 
+                value={selectedClientId} 
+                onValueChange={(value) => {
+                  setSelectedClientId(value);
+                  setManualMode(false);
+                }}
+                disabled={loadingClients}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map(client => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.company_name || client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Título Pendente</Label>
+              <Select 
+                value={selectedRecordId} 
+                onValueChange={setSelectedRecordId}
+                disabled={!selectedClientId || loadingRecords || pendingRecords.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !selectedClientId 
+                      ? "Selecione um cliente primeiro" 
+                      : loadingRecords 
+                        ? "Carregando..." 
+                        : pendingRecords.length === 0 
+                          ? "Sem títulos pendentes"
+                          : "Selecione um título..."
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {pendingRecords.map(record => (
+                    <SelectItem key={record.id} value={record.id}>
+                      {record.plan_name} - R$ {record.value.toFixed(2)} - Vence {new Date(record.due_date).toLocaleDateString('pt-BR')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleManualInput}
+              className="text-xs"
+            >
+              Ou preencher manualmente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Formulário de Entrada */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -77,7 +197,11 @@ export function LateFeeCalculator() {
             onChange={(e) => {
               const value = e.target.value.replace(/[^\d,.-]/g, '');
               setValorDevido(value);
+              if (!manualMode && selectedRecordId) {
+                setManualMode(true);
+              }
             }}
+            disabled={!manualMode && !selectedRecordId && !selectedClientId}
           />
         </div>
 
@@ -87,7 +211,13 @@ export function LateFeeCalculator() {
             id="dataVencimento"
             type="date"
             value={dataVencimento}
-            onChange={(e) => setDataVencimento(e.target.value)}
+            onChange={(e) => {
+              setDataVencimento(e.target.value);
+              if (!manualMode && selectedRecordId) {
+                setManualMode(true);
+              }
+            }}
+            disabled={!manualMode && !selectedRecordId && !selectedClientId}
           />
         </div>
 
@@ -114,6 +244,16 @@ export function LateFeeCalculator() {
           </div>
         </div>
       </div>
+
+      {/* Mensagem quando não há atraso */}
+      {dataVencimento && diasAtraso === 0 && (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            Pagamento dentro do prazo. Não há multa ou mora a ser aplicada.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Botões de Ação */}
       <div className="flex gap-3">
