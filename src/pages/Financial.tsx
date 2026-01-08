@@ -176,9 +176,9 @@ export default function Financial() {
       Cliente: record.client_name,
       Plano: record.plan_name,
       Valor: `R$ ${Number(record.value).toFixed(2)}`,
-      Vencimento: new Date(record.due_date).toLocaleDateString(),
+      Vencimento: record.due_date.split('-').reverse().join('/'),
       Status: record.status === 'quitado' ? 'Quitado' : record.status === 'pendente' ? 'Pendente' : 'Em Atraso',
-      Pagamento: record.payment_date ? new Date(record.payment_date).toLocaleDateString() : "-",
+      Pagamento: record.payment_date ? record.payment_date.split('-').reverse().join('/') : "-",
       "Forma de Pagamento": record.payment_method
     }))
     
@@ -410,12 +410,12 @@ export default function Financial() {
                        </div>
                        <div className="flex items-center gap-1">
                          <Calendar className="h-3 w-3" />
-                         Vence em {new Date(record.due_date).toLocaleDateString()}
+                         Vence em {record.due_date.split('-').reverse().join('/')}
                        </div>
                        {record.payment_date && (
                          <div className="flex items-center gap-1">
                            <CheckCircle className="h-3 w-3" />
-                           Pago em {new Date(record.payment_date).toLocaleDateString()}
+                           Pago em {record.payment_date.split('-').reverse().join('/')}
                          </div>
                        )}
                        <div className="text-xs">
