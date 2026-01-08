@@ -184,7 +184,7 @@ export function BulkDueDateDialog({ open, onOpenChange, record, onSuccess }: Bul
                     <div className="text-xs text-muted-foreground space-y-1 mt-2">
                       {previewData.records.slice(0, 5).map((r, idx) => (
                         <div key={r.id}>
-                          {idx + 1}. {new Date(r.due_date).toLocaleDateString('pt-BR')} → Dia {new Date(newDueDate).getDate()}
+                          {idx + 1}. {new Date(r.due_date).toLocaleDateString('pt-BR')} → Dia {parseInt(newDueDate.split('-')[2], 10)}
                         </div>
                       ))}
                       {previewData.count > 5 && (
