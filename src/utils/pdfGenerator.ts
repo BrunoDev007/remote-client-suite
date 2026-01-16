@@ -113,9 +113,11 @@ export const generatePDF = async (report: TechnicalReport) => {
   
   yPosition += 20;
   
-  // Client and generation info block
+  // Client and generation info block (no box for service reports)
   const infoBoxHeight = 25;
-  addSectionBox(margin, yPosition - 5, pageWidth - 2 * margin, infoBoxHeight);
+  if (report.type !== 'service') {
+    addSectionBox(margin, yPosition - 5, pageWidth - 2 * margin, infoBoxHeight);
+  }
   
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
@@ -385,7 +387,7 @@ export const generatePDF = async (report: TechnicalReport) => {
       yPosition += 10;
       
       const basicInfoHeight = 32;
-      addSectionBox(margin, yPosition - 5, pageWidth - 2 * margin, basicInfoHeight);
+      // No box for service reports
       
       pdf.setFont('helvetica', 'normal');
       let linePos = yPosition + 5;
@@ -431,8 +433,7 @@ export const generatePDF = async (report: TechnicalReport) => {
         } else {
           // Check for page break before adding text
           if (currentY > pageHeight - 60) {
-            const boxHeight = currentY - descBoxStart + 5;
-            addSectionBox(margin, descBoxStart, pageWidth - 2 * margin, boxHeight);
+            // Page break without adding box for service reports
             pdf.addPage();
             yPosition = 30;
             currentY = yPosition + 5;
@@ -443,8 +444,7 @@ export const generatePDF = async (report: TechnicalReport) => {
       }
       
       yPosition = currentY;
-      const descBoxHeight = yPosition - descBoxStart + 5;
-      addSectionBox(margin, descBoxStart, pageWidth - 2 * margin, descBoxHeight);
+      // No box for service reports
       yPosition += 20;
     }
 
