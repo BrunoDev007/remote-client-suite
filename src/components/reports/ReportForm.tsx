@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { TechnicalReport } from "@/pages/TechnicalReports";
 import { useClients } from "@/hooks/useClients";
+import { useProfiles } from "@/hooks/useProfiles";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 interface ReportFormProps {
   report?: TechnicalReport | null;
@@ -15,11 +17,12 @@ interface ReportFormProps {
 }
 
 export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
-  const [reportType, setReportType] = useState<'monitoring' | 'periodic' | 'backup' | ''>('');
+  const [reportType, setReportType] = useState<'monitoring' | 'periodic' | 'backup' | 'service' | ''>('');
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
   const [formData, setFormData] = useState<Record<string, any>>({});
   const { clients, loading } = useClients();
+  const { profiles, loading: profilesLoading } = useProfiles();
 
   // Initialize form with existing report data
   useEffect(() => {
@@ -78,6 +81,7 @@ export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
                   <SelectItem value="monitoring">Relatório de Acompanhamento</SelectItem>
                   <SelectItem value="periodic">Relatório de Atividades Periódicas</SelectItem>
                   <SelectItem value="backup">Relatório de Backup e Segurança</SelectItem>
+                  <SelectItem value="service">Relatório Técnico de Atendimentos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -114,6 +118,16 @@ export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
       {reportType === 'monitoring' && <MonitoringForm formData={formData} updateField={updateFormField} />}
       {reportType === 'periodic' && <PeriodicForm formData={formData} updateField={updateFormField} />}
       {reportType === 'backup' && <BackupForm formData={formData} updateField={updateFormField} />}
+      {reportType === 'service' && (
+        <ServiceReportForm 
+          formData={formData} 
+          updateField={updateFormField} 
+          profiles={profiles}
+          profilesLoading={profilesLoading}
+          clients={clients}
+          selectedClientId={clientId}
+        />
+      )}
 
       {reportType && (
         <div className="flex justify-end gap-3 pt-4">
@@ -125,6 +139,149 @@ export function ReportForm({ report, onSave, onCancel }: ReportFormProps) {
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+interface ServiceReportFormProps {
+  formData: Record<string, any>;
+  updateField: (field: string, value: any) => void;
+  profiles: { id: string; name: string }[];
+  profilesLoading: boolean;
+  clients: { id: string; name: string; company_name?: string | null; fantasy_name?: string | null }[];
+  selectedClientId: string;
+}
+
+function ServiceReportForm({ formData, updateField, profiles, profilesLoading, clients, selectedClientId }: ServiceReportFormProps) {
+  // Auto-fill client name for signature when client is selected
+  useEffect(() => {
+    if (selectedClientId) {
+      const client = clients.find(c => c.id === selectedClientId);
+      if (client) {
+        const clientName = client.company_name || client.fantasy_name || client.name;
+        updateField('clientSignatureName', clientName);
+      }
+    }
+  }, [selectedClientId, clients]);
+
+  // Auto-fill technician name for signature when technician is selected
+  useEffect(() => {
+    if (formData.technicianId) {
+      const profile = profiles.find(p => p.id === formData.technicianId);
+      if (profile) {
+        updateField('technicianName', profile.name);
+        updateField('technicianSignatureName', profile.name);
+      }
+    }
+  }, [formData.technicianId, profiles]);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações do Atendimento</CardTitle>
+          <CardDescription>Preencha os dados do atendimento técnico</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="orderNumber">Pedido *</Label>
+              <Input
+                id="orderNumber"
+                placeholder="Ex: OS-2026-001"
+                value={formData.orderNumber || ''}
+                onChange={(e) => updateField('orderNumber', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="technician">Técnico Responsável *</Label>
+              <Select 
+                value={formData.technicianId || ''} 
+                onValueChange={(value) => updateField('technicianId', value)}
+                disabled={profilesLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o técnico" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles.map((profile) => (
+                    <SelectItem key={profile.id} value={profile.id}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="periodStart">Período De *</Label>
+              <Input
+                id="periodStart"
+                type="date"
+                value={formData.periodStart || ''}
+                onChange={(e) => updateField('periodStart', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="periodEnd">Período Até *</Label>
+              <Input
+                id="periodEnd"
+                type="date"
+                value={formData.periodEnd || ''}
+                onChange={(e) => updateField('periodEnd', e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Descrição Técnica</CardTitle>
+          <CardDescription>Descreva detalhadamente o atendimento realizado</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RichTextEditor
+            value={formData.technicalDescription || ''}
+            onChange={(value) => updateField('technicalDescription', value)}
+            placeholder="Descreva o atendimento técnico..."
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Assinaturas</CardTitle>
+          <CardDescription>Nomes para as assinaturas do relatório</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="technicianSignature">Nome do Técnico para Assinatura</Label>
+              <Input
+                id="technicianSignature"
+                value={formData.technicianSignatureName || ''}
+                onChange={(e) => updateField('technicianSignatureName', e.target.value)}
+                placeholder="Nome do técnico"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clientSignature">Nome do Cliente para Assinatura</Label>
+              <Input
+                id="clientSignature"
+                value={formData.clientSignatureName || ''}
+                onChange={(e) => updateField('clientSignatureName', e.target.value)}
+                placeholder="Nome do cliente"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
