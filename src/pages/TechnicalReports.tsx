@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface TechnicalReport {
   id: string;
-  type: 'monitoring' | 'periodic' | 'backup';
+  type: 'monitoring' | 'periodic' | 'backup' | 'service';
   title: string;
   data: Record<string, any>;
   createdAt: string;

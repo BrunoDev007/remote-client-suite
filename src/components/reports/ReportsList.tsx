@@ -25,6 +25,7 @@ export function ReportsList({ reports, onDelete, onEdit }: ReportsListProps) {
       case 'monitoring': return 'Acompanhamento';
       case 'periodic': return 'Atividades Periódicas';
       case 'backup': return 'Backup e Segurança';
+      case 'service': return 'Atendimentos';
       default: return 'Técnico';
     }
   };
@@ -190,6 +191,20 @@ function ReportDetails({ report }: { report: TechnicalReport }) {
     );
   };
 
+  const renderHtmlField = (label: string, value: any) => {
+    if (!value) return null;
+    
+    return (
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-muted-foreground">{label}</label>
+        <div 
+          className="text-sm text-foreground p-2 bg-muted rounded-md prose prose-sm max-w-none"
+          dangerouslySetInnerHTML={{ __html: value }}
+        />
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -225,6 +240,32 @@ function ReportDetails({ report }: { report: TechnicalReport }) {
             {renderField("Último Backup Válido", report.data.lastValidBackup ? format(new Date(report.data.lastValidBackup), "dd/MM/yyyy HH:mm", { locale: ptBR }) : null)}
             {renderField("Atualizações Aplicadas", report.data.updatesApplied)}
             {renderField("Alertas/Vulnerabilidades", report.data.alertsVulnerabilities)}
+          </>
+        )}
+
+        {report.type === 'service' && (
+          <>
+            {renderField("Pedido", report.data.orderNumber)}
+            {renderField("Período", report.data.periodStart && report.data.periodEnd 
+              ? `${format(new Date(report.data.periodStart), "dd/MM/yyyy", { locale: ptBR })} a ${format(new Date(report.data.periodEnd), "dd/MM/yyyy", { locale: ptBR })}`
+              : null
+            )}
+            {renderField("Técnico Responsável", report.data.technicianName)}
+            {renderHtmlField("Descrição Técnica", report.data.technicalDescription)}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">Assinatura do Técnico</label>
+                <div className="text-sm text-foreground p-2 bg-muted rounded-md">
+                  {report.data.technicianSignatureName || '-'}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">Assinatura do Cliente</label>
+                <div className="text-sm text-foreground p-2 bg-muted rounded-md">
+                  {report.data.clientSignatureName || '-'}
+                </div>
+              </div>
+            </div>
           </>
         )}
       </CardContent>

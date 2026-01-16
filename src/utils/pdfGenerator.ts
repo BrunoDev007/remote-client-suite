@@ -3,9 +3,64 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TechnicalReport } from '@/pages/TechnicalReports';
 
+// Helper function to convert HTML to plain text with basic formatting
+const htmlToText = (html: string): string[] => {
+  if (!html) return [];
+  
+  // Create a temporary div to parse HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  const lines: string[] = [];
+  
+  const processNode = (node: Node, prefix: string = '') => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        lines.push(prefix + text);
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      if (tagName === 'ul' || tagName === 'ol') {
+        let index = 1;
+        element.childNodes.forEach((child) => {
+          if ((child as HTMLElement).tagName?.toLowerCase() === 'li') {
+            const bullet = tagName === 'ul' ? '• ' : `${index}. `;
+            processNode(child, bullet);
+            index++;
+          }
+        });
+      } else if (tagName === 'li') {
+        const text = element.textContent?.trim();
+        if (text) {
+          lines.push(prefix + text);
+        }
+      } else if (tagName === 'p' || tagName === 'br') {
+        element.childNodes.forEach((child) => processNode(child, prefix));
+        if (tagName === 'p') {
+          lines.push('');
+        }
+      } else {
+        element.childNodes.forEach((child) => processNode(child, prefix));
+      }
+    }
+  };
+  
+  temp.childNodes.forEach((node) => processNode(node));
+  
+  return lines.filter((line, index, arr) => {
+    // Remove consecutive empty lines
+    if (line === '' && arr[index - 1] === '') return false;
+    return true;
+  });
+};
+
 export const generatePDF = async (report: TechnicalReport) => {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.width;
+  const pageHeight = pdf.internal.pageSize.height;
   const margin = 20;
   let yPosition = 30;
 
@@ -15,6 +70,16 @@ export const generatePDF = async (report: TechnicalReport) => {
     const lines = pdf.splitTextToSize(text, maxWidth);
     pdf.text(lines, x, y);
     return y + (lines.length * fontSize * 0.6);
+  };
+
+  // Helper function to check for page break
+  const checkPageBreak = (requiredSpace: number) => {
+    if (yPosition + requiredSpace > pageHeight - 30) {
+      pdf.addPage();
+      yPosition = 30;
+      return true;
+    }
+    return false;
   };
 
   // Helper function to add a visual block separator
@@ -35,7 +100,12 @@ export const generatePDF = async (report: TechnicalReport) => {
   // Header
   pdf.setFontSize(20);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('RELATÓRIO TÉCNICO', pageWidth / 2, yPosition, { align: 'center' });
+  
+  if (report.type === 'service') {
+    pdf.text('RELATÓRIO TÉCNICO DE ATENDIMENTOS', pageWidth / 2, yPosition, { align: 'center' });
+  } else {
+    pdf.text('RELATÓRIO TÉCNICO', pageWidth / 2, yPosition, { align: 'center' });
+  }
   
   yPosition += 15;
   pdf.setFontSize(14);
@@ -295,6 +365,137 @@ export const generatePDF = async (report: TechnicalReport) => {
       addSectionBox(margin, alertsBoxStart, pageWidth - 2 * margin, alertsBoxHeight);
       yPosition += 15;
     }
+  }
+
+  if (report.type === 'service') {
+    // Section Header
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(margin, yPosition - 2, pageWidth - 2 * margin, 18, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('INFORMAÇÕES DO ATENDIMENTO', margin + 5, yPosition + 10);
+    yPosition += 25;
+    
+    // Basic Information Block
+    const hasBasicInfo = report.data.orderNumber || report.data.periodStart || report.data.technicianName;
+    if (hasBasicInfo) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('DADOS DO ATENDIMENTO', margin, yPosition);
+      yPosition += 10;
+      
+      const basicInfoHeight = 32;
+      addSectionBox(margin, yPosition - 5, pageWidth - 2 * margin, basicInfoHeight);
+      
+      pdf.setFont('helvetica', 'normal');
+      let linePos = yPosition + 5;
+      
+      if (report.data.orderNumber) {
+        pdf.text(`Pedido: ${report.data.orderNumber}`, margin + 5, linePos);
+        linePos += 7;
+      }
+      
+      if (report.data.periodStart && report.data.periodEnd) {
+        const periodStart = format(new Date(report.data.periodStart), "dd/MM/yyyy", { locale: ptBR });
+        const periodEnd = format(new Date(report.data.periodEnd), "dd/MM/yyyy", { locale: ptBR });
+        pdf.text(`Período: ${periodStart} a ${periodEnd}`, margin + 5, linePos);
+        linePos += 7;
+      }
+      
+      if (report.data.technicianName) {
+        pdf.text(`Técnico Responsável: ${report.data.technicianName}`, margin + 5, linePos);
+      }
+      
+      yPosition += basicInfoHeight + 15;
+    }
+
+    // Technical Description Block
+    if (report.data.technicalDescription) {
+      checkPageBreak(50);
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text('DESCRIÇÃO TÉCNICA', margin, yPosition);
+      yPosition += 10;
+      
+      const descBoxStart = yPosition - 5;
+      pdf.setFont('helvetica', 'normal');
+      
+      // Convert HTML to text lines
+      const descriptionLines = htmlToText(report.data.technicalDescription);
+      
+      let currentY = yPosition + 5;
+      for (const line of descriptionLines) {
+        if (line === '') {
+          currentY += 4;
+        } else {
+          // Check for page break before adding text
+          if (currentY > pageHeight - 60) {
+            const boxHeight = currentY - descBoxStart + 5;
+            addSectionBox(margin, descBoxStart, pageWidth - 2 * margin, boxHeight);
+            pdf.addPage();
+            yPosition = 30;
+            currentY = yPosition + 5;
+          }
+          
+          currentY = addText(line, margin + 5, currentY, pageWidth - 2 * margin - 10);
+        }
+      }
+      
+      yPosition = currentY;
+      const descBoxHeight = yPosition - descBoxStart + 5;
+      addSectionBox(margin, descBoxStart, pageWidth - 2 * margin, descBoxHeight);
+      yPosition += 20;
+    }
+
+    // Signatures Block
+    checkPageBreak(70);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.text('ASSINATURAS', margin, yPosition);
+    yPosition += 15;
+    
+    const signatureBoxHeight = 50;
+    const signatureWidth = (pageWidth - 2 * margin - 10) / 2;
+    
+    // Left signature box (Technician)
+    addSectionBox(margin, yPosition - 5, signatureWidth, signatureBoxHeight);
+    
+    // Right signature box (Client)
+    addSectionBox(margin + signatureWidth + 10, yPosition - 5, signatureWidth, signatureBoxHeight);
+    
+    // Signature lines
+    const signatureLineY = yPosition + 25;
+    const signatureLineLength = signatureWidth - 20;
+    
+    pdf.setDrawColor(100, 100, 100);
+    pdf.setLineWidth(0.5);
+    
+    // Left signature line
+    pdf.line(margin + 10, signatureLineY, margin + 10 + signatureLineLength, signatureLineY);
+    
+    // Right signature line
+    pdf.line(margin + signatureWidth + 20, signatureLineY, margin + signatureWidth + 20 + signatureLineLength, signatureLineY);
+    
+    // Labels
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    
+    pdf.text('Assinatura do Técnico', margin + signatureWidth / 2, signatureLineY + 8, { align: 'center' });
+    pdf.text('Assinatura do Cliente', margin + signatureWidth + 10 + signatureWidth / 2, signatureLineY + 8, { align: 'center' });
+    
+    // Names
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    
+    const technicianName = report.data.technicianSignatureName || report.data.technicianName || '';
+    const clientName = report.data.clientSignatureName || report.client_name || '';
+    
+    pdf.text(technicianName, margin + signatureWidth / 2, signatureLineY + 16, { align: 'center' });
+    pdf.text(clientName, margin + signatureWidth + 10 + signatureWidth / 2, signatureLineY + 16, { align: 'center' });
+    
+    yPosition += signatureBoxHeight + 15;
   }
 
   // Footer
