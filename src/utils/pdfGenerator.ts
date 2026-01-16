@@ -459,11 +459,7 @@ export const generatePDF = async (report: TechnicalReport) => {
     const signatureBoxHeight = 50;
     const signatureWidth = (pageWidth - 2 * margin - 10) / 2;
     
-    // Left signature box (Technician)
-    addSectionBox(margin, yPosition - 5, signatureWidth, signatureBoxHeight);
-    
-    // Right signature box (Client)
-    addSectionBox(margin + signatureWidth + 10, yPosition - 5, signatureWidth, signatureBoxHeight);
+    // Signature areas without border boxes
     
     // Signature lines
     const signatureLineY = yPosition + 25;
