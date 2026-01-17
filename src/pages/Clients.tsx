@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/integrations/supabase/client"
-import { Plus, Search, Edit, Trash2, User, Building, Phone, Mail, MapPin, Eye } from "lucide-react"
+import { Plus, Search, Edit, Trash2, User, Building, Phone, Mail, MapPin, Eye, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -56,7 +56,72 @@ export default function Clients() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [formData, setFormData] = useState<Partial<Client>>({})
+  const [isLoadingCnpj, setIsLoadingCnpj] = useState(false)
   const { toast } = useToast()
+
+  const handleCnpjLookup = async () => {
+    const cnpj = formData.cnpj?.replace(/\D/g, '')
+    
+    if (!cnpj || cnpj.length !== 14) {
+      toast({
+        variant: "destructive",
+        title: "CNPJ inválido",
+        description: "Digite um CNPJ válido com 14 dígitos.",
+      })
+      return
+    }
+    
+    setIsLoadingCnpj(true)
+    
+    try {
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)
+      
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado')
+      }
+      
+      const data = await response.json()
+      
+      // Format phone number if available
+      let formattedPhone = ''
+      if (data.ddd_telefone_1) {
+        const phoneDigits = data.ddd_telefone_1.replace(/\D/g, '')
+        if (phoneDigits.length >= 10) {
+          formattedPhone = `(${phoneDigits.substring(0, 2)}) ${phoneDigits.substring(2)}`
+        } else {
+          formattedPhone = data.ddd_telefone_1
+        }
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        company_name: data.razao_social || prev.company_name,
+        fantasy_name: data.nome_fantasia || prev.fantasy_name,
+        phone: formattedPhone || prev.phone,
+        email: data.email?.trim().toLowerCase() || prev.email,
+        cep: data.cep?.replace(/\D/g, '') || prev.cep,
+        address: data.logradouro || prev.address,
+        number: data.numero || prev.number,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.municipio || prev.city,
+        state: data.uf || prev.state,
+      }))
+      
+      toast({
+        title: "Dados encontrados!",
+        description: `Empresa: ${data.razao_social}`,
+      })
+      
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro na busca",
+        description: "CNPJ não encontrado ou serviço indisponível.",
+      })
+    } finally {
+      setIsLoadingCnpj(false)
+    }
+  }
 
   useEffect(() => {
     loadClients()
@@ -461,12 +526,28 @@ export default function Clients() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ</Label>
-                    <Input
-                      id="cnpj"
-                      placeholder="00.000.000/0000-00"
-                      value={formData.cnpj || ""}
-                      onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="cnpj"
+                        placeholder="00.000.000/0000-00"
+                        value={formData.cnpj || ""}
+                        onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCnpjLookup}
+                        disabled={isLoadingCnpj}
+                        title="Buscar dados do CNPJ"
+                      >
+                        {isLoadingCnpj ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="state_registration">Inscrição Estadual</Label>
