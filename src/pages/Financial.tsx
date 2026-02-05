@@ -271,7 +271,7 @@ export default function Financial() {
       </div>
 
       {/* Statistics Cards - Responsivo */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -323,6 +323,20 @@ export default function Financial() {
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
                 <p className="text-base sm:text-2xl font-bold text-primary truncate">R$ {stats.totalReceita.toFixed(2)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">A Receber</p>
+                <p className="text-base sm:text-2xl font-bold text-warning truncate">R$ {stats.totalPendente.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
