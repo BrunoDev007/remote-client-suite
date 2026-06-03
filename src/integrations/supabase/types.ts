@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_plan_members: {
+        Row: {
+          client_id: string
+          client_plan_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          client_id: string
+          client_plan_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          client_id?: string
+          client_plan_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_plan_members_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_plan_members_client_plan_id_fkey"
+            columns: ["client_plan_id"]
+            isOneToOne: false
+            referencedRelation: "client_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_plans: {
         Row: {
           client_id: string
