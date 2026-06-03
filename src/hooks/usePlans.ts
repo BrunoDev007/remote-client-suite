@@ -8,6 +8,7 @@ type PlanInsert = Database['public']['Tables']['plans']['Insert']
 type ClientPlan = Database['public']['Tables']['client_plans']['Row'] & {
   client_name: string
   plan_name: string
+  members?: { id: string; client_id: string; client_name: string }[]
 }
 
 export function usePlans() {
