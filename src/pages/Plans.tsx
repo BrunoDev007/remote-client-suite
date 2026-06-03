@@ -91,7 +91,7 @@ export default function Plans() {
       return
     }
 
-    await linkClientToPlan(linkFormData)
+    await linkClientToPlan({ ...linkFormData, additional_client_ids: additionalClientIds })
     setIsLinkDialogOpen(false)
     resetLinkForm()
   }
