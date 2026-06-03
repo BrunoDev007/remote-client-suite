@@ -182,8 +182,11 @@ export function usePlans() {
     payment_method: string
     payment_date: string
     contract_url?: string
+    additional_client_ids?: string[]
   }) => {
     try {
+      const { additional_client_ids, ...insertData } = linkData
+
       // Get plan data for value
       const { data: planData, error: planError } = await supabase
         .from('plans')
@@ -196,7 +199,7 @@ export function usePlans() {
       const { data, error } = await supabase
         .from('client_plans')
         .insert([{
-          ...linkData,
+          ...insertData,
           value: planData.value
         }])
         .select(`
@@ -208,22 +211,35 @@ export function usePlans() {
 
       if (error) throw error
 
-      const formattedData = {
-        ...data,
-        client_name: data.clients.company_name || data.clients.name,
-        plan_name: data.plans.name
+      // Insert group members (additional CNPJs)
+      const memberIds = (additional_client_ids || []).filter(
+        (cid) => cid && cid !== linkData.client_id
+      )
+      if (memberIds.length > 0) {
+        const { error: membersError } = await supabase
+          .from('client_plan_members')
+          .insert(
+            memberIds.map((cid) => ({
+              client_plan_id: data.id,
+              client_id: cid,
+            }))
+          )
+        if (membersError) throw membersError
       }
 
-      setClientPlans([formattedData, ...clientPlans])
-      
-      // Create financial record
+      // Create financial record (1 only, for the responsible client)
       await createFinancialRecord(linkData.client_id, linkData.plan_id, data.id, planData.value, linkData)
-      
+
+      // Refetch to include members
+      await fetchClientPlans()
+
       toast({
         title: "Cliente vinculado!",
-        description: `Cliente foi vinculado ao plano com sucesso.`,
+        description: memberIds.length > 0
+          ? `Grupo de ${memberIds.length + 1} CNPJs vinculado ao plano.`
+          : `Cliente foi vinculado ao plano com sucesso.`,
       })
-      return { success: true, data: formattedData }
+      return { success: true, data }
     } catch (error: any) {
       toast({
         variant: "destructive",
