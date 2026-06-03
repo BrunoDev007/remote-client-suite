@@ -268,6 +268,53 @@ export default function Plans() {
                    />
                  </div>
 
+                 <div className="space-y-2">
+                   <Label>CNPJs adicionais no mesmo grupo (opcional)</Label>
+                   <p className="text-xs text-muted-foreground">
+                     Todos os CNPJs deste grupo compartilham a mesma cobrança mensal. Apenas o cliente responsável (acima) receberá a fatura.
+                   </p>
+                   <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+                     {clients
+                       .filter((c) => c.id !== linkFormData.client_id)
+                       .map((client) => {
+                         const checked = additionalClientIds.includes(client.id)
+                         return (
+                           <div key={client.id} className="flex items-center gap-2">
+                             <Checkbox
+                               id={`member-${client.id}`}
+                               checked={checked}
+                               onCheckedChange={(v) => {
+                                 setAdditionalClientIds((prev) =>
+                                   v ? [...prev, client.id] : prev.filter((id) => id !== client.id)
+                                 )
+                               }}
+                             />
+                             <label
+                               htmlFor={`member-${client.id}`}
+                               className="text-sm cursor-pointer flex-1"
+                             >
+                               {client.company_name || client.name}
+                               {client.cnpj && (
+                                 <span className="text-muted-foreground ml-2">({client.cnpj})</span>
+                               )}
+                             </label>
+                           </div>
+                         )
+                       })}
+                     {clients.filter((c) => c.id !== linkFormData.client_id).length === 0 && (
+                       <p className="text-sm text-muted-foreground text-center py-2">
+                         Nenhum cliente disponível
+                       </p>
+                     )}
+                   </div>
+                   {additionalClientIds.length > 0 && (
+                     <p className="text-xs text-primary">
+                       {additionalClientIds.length + 1} CNPJs no grupo — cobrança única compartilhada
+                     </p>
+                   )}
+                 </div>
+
+
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>
                     Cancelar
