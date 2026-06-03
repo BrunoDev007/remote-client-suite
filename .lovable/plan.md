@@ -1,93 +1,87 @@
-
-## Plano: Adicionar Card "A Receber" na Tela Financeiro
+## Plano: Agrupar múltiplos CNPJs em um único plano
 
 ### Objetivo
-Adicionar um novo card de estatísticas chamado "A Receber" que mostra o total de valores pendentes/atrasados quando o usuário filtra por mês.
+Permitir que vários clientes (CNPJs) sejam vinculados juntos a um mesmo plano, compartilhando uma única cobrança mensal (ex.: 4 CNPJs vinculados ao PL 300 → apenas R$ 300 por mês no total, não R$ 300 por CNPJ).
 
 ---
 
 ### Situação Atual
-
-O hook `useFinancial.ts` já calcula `totalPendente` (linha 291):
-```typescript
-totalPendente: recordsWithStatus.filter(r => r.status !== 'quitado').reduce((sum, r) => sum + Number(r.value), 0)
-```
-
-Porém, esse valor **não está sendo exibido** na tela. Atualmente existem 4 cards:
-1. Quitados (quantidade)
-2. Pendentes (quantidade)
-3. Em Atraso (quantidade)
-4. Receita (valor total quitado)
+Hoje, cada vinculação em `client_plans` representa **1 cliente ↔ 1 plano**, e gera **1 registro financeiro por cliente por mês**. Se 4 CNPJs forem vinculados ao mesmo plano, são geradas 4 cobranças mensais.
 
 ---
 
-### Solução
+### Solução: Grupo de Faturamento
 
-Adicionar um **5º card** chamado **"A Receber"** que exibe o valor de `stats.totalPendente`.
-
----
-
-### Mudanças no Código
-
-**Arquivo:** `src/pages/Financial.tsx`
-
-**Localização:** Grid de cards de estatísticas (linhas 273-330)
-
-**Antes:**
-```
-grid-cols-2 lg:grid-cols-4
-```
-
-**Depois:**
-```
-grid-cols-2 lg:grid-cols-5
-```
-
-**Novo Card a Adicionar (após o card "Receita"):**
-
-```tsx
-<Card>
-  <CardContent className="p-3 sm:p-4">
-    <div className="flex items-center gap-2 sm:gap-3">
-      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
-        <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs sm:text-sm text-muted-foreground truncate">A Receber</p>
-        <p className="text-base sm:text-2xl font-bold text-warning truncate">
-          R$ {stats.totalPendente.toFixed(2)}
-        </p>
-      </div>
-    </div>
-  </CardContent>
-</Card>
-```
+Introduzir o conceito de **Grupo de Cobrança** (billing group) na vinculação:
+- Uma vinculação pode conter **vários clientes** (CNPJs).
+- Um dos CNPJs é marcado como **CNPJ Responsável pela Cobrança** (recebe a fatura).
+- Os demais são "membros do grupo" — aparecem listados, mas não geram cobrança própria.
+- O sistema gera **apenas 1 registro financeiro mensal** por grupo, com o valor do plano.
 
 ---
 
-### Comportamento
+### Mudanças no Banco de Dados
 
-| Ação | Resultado |
-|------|-----------|
-| Usuário filtra por mês | Card "A Receber" mostra soma dos valores pendentes/atrasados daquele mês |
-| Usuário clica em "Quitar" | Valor sai de "A Receber" e vai para "Receita" |
-| Usuário clica em "Desquitar" | Valor sai de "Receita" e volta para "A Receber" |
+**Nova tabela `client_plan_members`** para listar os CNPJs adicionais que pertencem a uma vinculação:
+
+```
+client_plan_members
+├── id
+├── client_plan_id  → FK client_plans (vinculação principal/grupo)
+├── client_id       → FK clients (CNPJ membro)
+├── created_at
+└── UNIQUE (client_plan_id, client_id)
+```
+
+A vinculação em `client_plans` continua representando o **CNPJ responsável** pela cobrança. Os CNPJs adicionais ficam em `client_plan_members`.
+
+Política RLS: mesma regra de leitura/escrita usada hoje em `client_plans` (usuário autenticado).
 
 ---
 
-### Layout Final dos Cards
+### Mudanças na Tela "Planos" (aba Vincular Cliente)
 
-```
-+----------+----------+----------+----------+------------+
-| Quitados | Pendentes| Em Atraso|  Receita | A Receber  |
-|    5     |    3     |    2     | R$500,00 | R$ 300,00  |
-+----------+----------+----------+----------+------------+
-```
+Modificar o diálogo "Vincular Cliente ao Plano":
+
+1. **Cliente Responsável (Cobrança)** — campo atual (select de 1 CNPJ).
+2. **Novo campo: "CNPJs adicionais no mesmo grupo"** — multi-select de clientes (opcional).
+3. Mensagem informativa: *"Todos os CNPJs deste grupo compartilham a mesma cobrança mensal de R$ X. Apenas o CNPJ responsável receberá a fatura."*
+
+Na listagem de vinculações ativas:
+- Mostrar o CNPJ responsável e, abaixo, a lista de CNPJs membros do grupo (badge tipo "+3 CNPJs vinculados").
+
+---
+
+### Mudanças no Financeiro
+
+Nenhuma alteração na lógica de geração mensal: ela já cria 1 registro por `client_plan` ativo. Como o grupo é representado por **1 único `client_plan`** (do responsável), continua gerando **1 cobrança mensal pelo valor do plano**.
+
+Adicional: na exibição do registro financeiro, indicar visualmente se há CNPJs agrupados (ex.: badge "Grupo: 4 CNPJs") ao lado do nome do cliente responsável.
 
 ---
 
 ### Detalhes Técnicos
 
-- O valor é calculado automaticamente pelo `getStats(filteredRecords)` que já existe
-- Quando um registro é quitado, `updateRecordStatus` atualiza o estado e os cards refletem a mudança instantaneamente
-- A cor do card será **warning (amarelo/laranja)** para indicar valores pendentes
+**Arquivos a editar:**
+- `supabase/migrations/...` — criar tabela `client_plan_members` com GRANTs e RLS.
+- `src/hooks/usePlans.ts`:
+  - `linkClientToPlan` aceita novo parâmetro `additional_client_ids: string[]` e insere em `client_plan_members` após criar a vinculação.
+  - `fetchClientPlans` faz join/leitura de `client_plan_members` para retornar `members: Client[]` em cada vinculação.
+  - `unlinkClient` apaga membros do grupo junto com a vinculação.
+- `src/pages/Plans.tsx`:
+  - Adicionar multi-select de clientes adicionais no diálogo de vincular.
+  - Exibir membros do grupo na lista de vinculações.
+- `src/pages/Financial.tsx` (opcional, visual): badge "Grupo (N CNPJs)" no nome do cliente quando houver membros.
+
+**Comportamento de exclusão:**
+- Remover um CNPJ membro: deleta apenas o registro em `client_plan_members`.
+- Desvincular o responsável: remove a vinculação inteira + membros + registros financeiros pendentes (igual hoje).
+
+---
+
+### Resultado para o exemplo do usuário
+
+Vinculação ao PL 300:
+- Responsável: CNPJ `28.205.133/0001-13`
+- Membros: `28.205.133/0002-02`, `28.205.133/0003-85`, `21.303.691/0001-72`
+- Cobrança gerada por mês: **1 registro de R$ 300** (em nome do responsável, com badge "Grupo: 4 CNPJs").
