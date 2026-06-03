@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { usePlans } from "@/hooks/usePlans"
 import { useClients } from "@/hooks/useClients"
 
@@ -58,6 +59,7 @@ export default function Plans() {
     end_date: "",
     contract_url: ""
   })
+  const [additionalClientIds, setAdditionalClientIds] = useState<string[]>([])
 
   const handleSavePlan = async () => {
     if (!planFormData.name || !planFormData.value) {
@@ -89,7 +91,7 @@ export default function Plans() {
       return
     }
 
-    await linkClientToPlan(linkFormData)
+    await linkClientToPlan({ ...linkFormData, additional_client_ids: additionalClientIds })
     setIsLinkDialogOpen(false)
     resetLinkForm()
   }
@@ -121,6 +123,7 @@ export default function Plans() {
       end_date: "",
       contract_url: ""
     })
+    setAdditionalClientIds([])
   }
 
   const filteredPlans = plans.filter(plan =>
@@ -264,6 +267,53 @@ export default function Plans() {
                      onChange={(e) => setLinkFormData({ ...linkFormData, contract_url: e.target.value })}
                    />
                  </div>
+
+                 <div className="space-y-2">
+                   <Label>CNPJs adicionais no mesmo grupo (opcional)</Label>
+                   <p className="text-xs text-muted-foreground">
+                     Todos os CNPJs deste grupo compartilham a mesma cobrança mensal. Apenas o cliente responsável (acima) receberá a fatura.
+                   </p>
+                   <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2">
+                     {clients
+                       .filter((c) => c.id !== linkFormData.client_id)
+                       .map((client) => {
+                         const checked = additionalClientIds.includes(client.id)
+                         return (
+                           <div key={client.id} className="flex items-center gap-2">
+                             <Checkbox
+                               id={`member-${client.id}`}
+                               checked={checked}
+                               onCheckedChange={(v) => {
+                                 setAdditionalClientIds((prev) =>
+                                   v ? [...prev, client.id] : prev.filter((id) => id !== client.id)
+                                 )
+                               }}
+                             />
+                             <label
+                               htmlFor={`member-${client.id}`}
+                               className="text-sm cursor-pointer flex-1"
+                             >
+                               {client.company_name || client.name}
+                               {client.cnpj && (
+                                 <span className="text-muted-foreground ml-2">({client.cnpj})</span>
+                               )}
+                             </label>
+                           </div>
+                         )
+                       })}
+                     {clients.filter((c) => c.id !== linkFormData.client_id).length === 0 && (
+                       <p className="text-sm text-muted-foreground text-center py-2">
+                         Nenhum cliente disponível
+                       </p>
+                     )}
+                   </div>
+                   {additionalClientIds.length > 0 && (
+                     <p className="text-xs text-primary">
+                       {additionalClientIds.length + 1} CNPJs no grupo — cobrança única compartilhada
+                     </p>
+                   )}
+                 </div>
+
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>
@@ -461,14 +511,19 @@ export default function Plans() {
                       </div>
                       
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground">{planClient.client_name}</h3>
                           <Badge variant="default">{planClient.plan_name}</Badge>
                           <Badge variant="default">
                             Ativo
                           </Badge>
+                          {planClient.members && planClient.members.length > 0 && (
+                            <Badge variant="secondary">
+                              Grupo: {planClient.members.length + 1} CNPJs
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
                             R$ {Number(planClient.value).toFixed(2)}
@@ -490,7 +545,20 @@ export default function Plans() {
                             </div>
                           )}
                         </div>
+                        {planClient.members && planClient.members.length > 0 && (
+                          <div className="mt-2 pt-2 border-t">
+                            <p className="text-xs text-muted-foreground mb-1">CNPJs adicionais no grupo:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {planClient.members.map((m) => (
+                                <Badge key={m.id} variant="outline" className="text-xs">
+                                  {m.client_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
+
                     </div>
 
                     <Button
