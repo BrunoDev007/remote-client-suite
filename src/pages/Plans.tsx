@@ -59,6 +59,7 @@ export default function Plans() {
     end_date: "",
     contract_url: ""
   })
+  const [additionalClientIds, setAdditionalClientIds] = useState<string[]>([])
 
   const handleSavePlan = async () => {
     if (!planFormData.name || !planFormData.value) {
