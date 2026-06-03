@@ -511,14 +511,19 @@ export default function Plans() {
                       </div>
                       
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-foreground">{planClient.client_name}</h3>
                           <Badge variant="default">{planClient.plan_name}</Badge>
                           <Badge variant="default">
                             Ativo
                           </Badge>
+                          {planClient.members && planClient.members.length > 0 && (
+                            <Badge variant="secondary">
+                              Grupo: {planClient.members.length + 1} CNPJs
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
                             R$ {Number(planClient.value).toFixed(2)}
@@ -540,7 +545,20 @@ export default function Plans() {
                             </div>
                           )}
                         </div>
+                        {planClient.members && planClient.members.length > 0 && (
+                          <div className="mt-2 pt-2 border-t">
+                            <p className="text-xs text-muted-foreground mb-1">CNPJs adicionais no grupo:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {planClient.members.map((m) => (
+                                <Badge key={m.id} variant="outline" className="text-xs">
+                                  {m.client_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
+
                     </div>
 
                     <Button
