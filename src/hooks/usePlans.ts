@@ -49,17 +49,23 @@ export function usePlans() {
         .select(`
           *,
           clients!inner(name, company_name),
-          plans!inner(name)
+          plans!inner(name),
+          client_plan_members(id, client_id, clients!inner(name, company_name))
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
       
-      const formattedData = data?.map(item => ({
+      const formattedData = data?.map((item: any) => ({
         ...item,
         client_name: item.clients.company_name || item.clients.name,
-        plan_name: item.plans.name
+        plan_name: item.plans.name,
+        members: (item.client_plan_members || []).map((m: any) => ({
+          id: m.id,
+          client_id: m.client_id,
+          client_name: m.clients.company_name || m.clients.name,
+        })),
       })) || []
       
       setClientPlans(formattedData)
