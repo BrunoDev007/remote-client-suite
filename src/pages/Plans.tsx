@@ -123,6 +123,7 @@ export default function Plans() {
       end_date: "",
       contract_url: ""
     })
+    setAdditionalClientIds([])
   }
 
   const filteredPlans = plans.filter(plan =>
