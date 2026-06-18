@@ -34,8 +34,8 @@ export function useFinancial() {
 
       if (!activePlans || activePlans.length === 0) return
 
-      // Data de vencimento para o mês selecionado (sempre dia do pagamento ou dia 10 como padrão)
-      const dueDate = new Date(year, month - 1, 10).toISOString().split('T')[0]
+      // Data de vencimento base do mês selecionado (fallback dia 10)
+      const mm = month.toString().padStart(2, '0')
 
       // Verificar quais registros já existem para este mês
       const startMonth = month.toString().padStart(2, '0')
@@ -56,16 +56,28 @@ export function useFinancial() {
       // Criar registros para planos que não têm registro neste mês
       const recordsToCreate = activePlans
         .filter(plan => !existingPlanIds.has(plan.id))
-        .map(plan => ({
-          client_plan_id: plan.id,
-          client_id: plan.client_id,
-          plan_id: plan.plan_id,
-          value: plan.value,
-          original_value: plan.value,
-          due_date: dueDate,
-          status: 'pendente',
-          payment_method: plan.payment_method || 'Não informado'
-        }))
+        .map(plan => {
+          // Referência para dia de vencimento e início do plano
+          const ref: string | null = (plan as any).payment_date || (plan as any).start_date || null
+          const day = ref ? ref.slice(8, 10) : '10'
+          const dueDate = `${year}-${mm}-${day}`
+
+          // Não gerar cobrança antes do início do plano
+          if (ref && dueDate < ref) return null
+
+          return {
+            client_plan_id: plan.id,
+            client_id: plan.client_id,
+            plan_id: plan.plan_id,
+            value: plan.value,
+            original_value: plan.value,
+            due_date: dueDate,
+            status: 'pendente',
+            payment_method: plan.payment_method || 'Não informado'
+          }
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+
 
       if (recordsToCreate.length > 0) {
         const { error: insertError } = await supabase
