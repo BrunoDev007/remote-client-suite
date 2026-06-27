@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { formatBRL } from '@/lib/utils'
 import type { Database } from '@/integrations/supabase/types'
 
 type FinancialRecord = Database['public']['Tables']['financial_records']['Row'] & {
@@ -179,7 +180,7 @@ export function useFinancial() {
       const record = records.find(r => r.id === recordId)
       if (!record) throw new Error('Registro não encontrado')
 
-      const observations = `Valor alterado de R$ ${record.original_value.toFixed(2)} para R$ ${newValue.toFixed(2)}. Motivo: ${reason}`
+      const observations = `Valor alterado de ${formatBRL(record.original_value)} para ${formatBRL(newValue)}. Motivo: ${reason}`
 
       const { data, error } = await supabase
         .from('financial_records')

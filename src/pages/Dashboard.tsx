@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, CreditCard, DollarSign, Monitor, TrendingUp, AlertCircle } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { formatBRL } from "@/lib/utils"
 
 interface DashboardStats {
   totalClients: number
@@ -152,7 +153,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Receita Recebida</p>
-                <p className="text-2xl font-bold text-success">R$ {stats.paidAmount.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-success">{formatBRL(stats.paidAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -166,7 +167,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Em Atraso</p>
-                <p className="text-2xl font-bold text-destructive">R$ {stats.overdueAmount.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-destructive">{formatBRL(stats.overdueAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -186,15 +187,15 @@ export default function Dashboard() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">A Receber</span>
-              <span className="font-medium">R$ {stats.totalReceivable.toFixed(2)}</span>
+              <span className="font-medium">{formatBRL(stats.totalReceivable)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Recebido</span>
-              <span className="font-medium text-success">R$ {stats.paidAmount.toFixed(2)}</span>
+              <span className="font-medium text-success">{formatBRL(stats.paidAmount)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Em Atraso</span>
-              <span className="font-medium text-destructive">R$ {stats.overdueAmount.toFixed(2)}</span>
+              <span className="font-medium text-destructive">{formatBRL(stats.overdueAmount)}</span>
             </div>
           </CardContent>
         </Card>

@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { usePlans } from "@/hooks/usePlans"
 import { useClients } from "@/hooks/useClients"
+import { formatBRL } from "@/lib/utils"
 
 const formasPagamento = [
   "Dinheiro",
@@ -202,7 +203,7 @@ export default function Plans() {
                        <SelectContent>
                          {plans.map(plan => (
                            <SelectItem key={plan.id} value={plan.id}>
-                             {plan.name} - R$ {Number(plan.value).toFixed(2)}
+                             {plan.name} - {formatBRL(Number(plan.value))}
                            </SelectItem>
                          ))}
                       </SelectContent>
@@ -438,7 +439,7 @@ export default function Plans() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            R$ {Number(plan.value).toFixed(2)}/mês
+                            {formatBRL(Number(plan.value))}/mês
                           </div>
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
@@ -526,7 +527,7 @@ export default function Plans() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            R$ {Number(planClient.value).toFixed(2)}
+                            {formatBRL(Number(planClient.value))}
                           </div>
                           <div className="flex items-center gap-1">
                             <CreditCard className="h-3 w-3" />
@@ -629,7 +630,7 @@ export default function Plans() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">
-                  R$ {clientPlans.reduce((sum, pc) => sum + Number(pc.value), 0).toFixed(2)}
+                  {formatBRL(clientPlans.reduce((sum, pc) => sum + Number(pc.value), 0))}
                 </div>
                 <p className="text-muted-foreground text-sm">
                   Estimativa mensal
@@ -656,9 +657,9 @@ export default function Plans() {
                         <p className="text-sm text-muted-foreground">{plan.description}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">R$ {Number(plan.value).toFixed(2)}/mês</p>
+                        <p className="font-medium">{formatBRL(Number(plan.value))}/mês</p>
                         <p className="text-sm text-muted-foreground">
-                          {linkedClients.length} clientes • R$ {revenue.toFixed(2)} total
+                          {linkedClients.length} clientes • {formatBRL(revenue)} total
                         </p>
                       </div>
                     </div>

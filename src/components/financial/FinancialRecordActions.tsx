@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { formatBRL } from "@/lib/utils"
 
 interface FinancialRecord {
   id: string
@@ -131,7 +132,7 @@ export function FinancialRecordActions({
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Deseja realmente excluir o lançamento de <strong>{record.client_name}</strong> no valor de{" "}
-              <strong>R$ {Number(record.value).toFixed(2)}</strong>?
+              <strong>{formatBRL(Number(record.value))}</strong>?
               <br />
               <br />
               Esta ação não pode ser desfeita.

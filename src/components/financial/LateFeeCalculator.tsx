@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLateFeeCalculator, LateFeeResult } from '@/hooks/useLateFeeCalculator';
 import { useClients } from '@/hooks/useClients';
 import { useClientPendingRecords, ClientPendingRecord } from '@/hooks/useClientPendingRecords';
+import { formatBRL } from '@/lib/utils';
 
 export function LateFeeCalculator() {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -164,7 +165,7 @@ export function LateFeeCalculator() {
                 <SelectContent>
                   {pendingRecords.map(record => (
                     <SelectItem key={record.id} value={record.id}>
-                      {record.plan_name} - R$ {record.value.toFixed(2)} - Vence {new Date(record.due_date).toLocaleDateString('pt-BR')}
+                      {record.plan_name} - {formatBRL(record.value)} - Vence {new Date(record.due_date).toLocaleDateString('pt-BR')}
                     </SelectItem>
                   ))}
                 </SelectContent>
