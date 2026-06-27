@@ -14,6 +14,7 @@ import { useFinancial } from "@/hooks/useFinancial"
 import { LateFeeCalculator } from "@/components/financial/LateFeeCalculator"
 import { BulkDueDateDialog } from "@/components/financial/BulkDueDateDialog"
 import { FinancialRecordActions } from "@/components/financial/FinancialRecordActions"
+import { formatBRL, parseBRL } from "@/lib/utils"
 
 const statusOptions = [
   { value: "todos", label: "Todos" },
@@ -175,7 +176,7 @@ export default function Financial() {
     const data = filteredRecords.map(record => ({
       Cliente: record.client_name,
       Plano: record.plan_name,
-      Valor: `R$ ${Number(record.value).toFixed(2)}`,
+      Valor: formatBRL(Number(record.value)),
       Vencimento: record.due_date.split('-').reverse().join('/'),
       Status: record.status === 'quitado' ? 'Quitado' : record.status === 'pendente' ? 'Pendente' : 'Em Atraso',
       Pagamento: record.payment_date ? record.payment_date.split('-').reverse().join('/') : "-",
@@ -322,7 +323,7 @@ export default function Financial() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Receita</p>
-                <p className="text-base sm:text-2xl font-bold text-primary truncate">R$ {stats.totalReceita.toFixed(2)}</p>
+                <p className="text-base sm:text-2xl font-bold text-primary truncate">{formatBRL(stats.totalReceita)}</p>
               </div>
             </div>
           </CardContent>
@@ -336,7 +337,7 @@ export default function Financial() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">A Receber</p>
-                <p className="text-base sm:text-2xl font-bold text-warning truncate">R$ {stats.totalPendente.toFixed(2)}</p>
+                <p className="text-base sm:text-2xl font-bold text-warning truncate">{formatBRL(stats.totalPendente)}</p>
               </div>
             </div>
           </CardContent>
@@ -422,12 +423,12 @@ export default function Financial() {
                         <DollarSign className="h-3 w-3 flex-shrink-0" />
                         {Number(record.value) !== Number(record.original_value) ? (
                           <span className="truncate">
-                            <span className="line-through">R$ {Number(record.original_value).toFixed(2)}</span>
+                            <span className="line-through">{formatBRL(Number(record.original_value))}</span>
                             {" → "}
-                            <span className="font-medium">R$ {Number(record.value).toFixed(2)}</span>
+                            <span className="font-medium">{formatBRL(Number(record.value))}</span>
                           </span>
                         ) : (
-                          <span>R$ {Number(record.value).toFixed(2)}</span>
+                          <span>{formatBRL(Number(record.value))}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
@@ -501,7 +502,7 @@ export default function Financial() {
 
             <div className="space-y-2">
               <Label>Valor Original</Label>
-              <Input value={`R$ ${Number(editingRecord?.original_value || 0).toFixed(2)}`} disabled />
+              <Input value={formatBRL(Number(editingRecord?.original_value || 0))} disabled />
             </div>
 
             <div className="space-y-2">
@@ -579,10 +580,10 @@ export default function Financial() {
               <div className="stat-card text-center p-3 sm:p-4 border rounded-lg">
                 <p className="text-xs sm:text-sm text-muted-foreground">Valor Total</p>
                 <p className="text-lg sm:text-2xl font-bold">
-                  R$ {reportData.reduce((sum, record) => {
-                    const value = parseFloat(record.Valor.replace('R$ ', '').replace(',', '.'))
+                  {formatBRL(reportData.reduce((sum, record) => {
+                    const value = parseBRL(record.Valor)
                     return sum + (isNaN(value) ? 0 : value)
-                  }, 0).toFixed(2)}
+                  }, 0))}
                 </p>
               </div>
               <div className="stat-card text-center p-3 sm:p-4 border rounded-lg">
