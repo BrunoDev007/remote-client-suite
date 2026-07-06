@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://iqxorxuhupbfgbrbsguj.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "gerenciador-online-mcp",
+      "version": "0.1.0",
+      "title": "Gerenciador Online MCP"
+    },
+    "tools": [
+      {
+        "name": "list_clients",
+        "title": "Listar clientes",
+        "description": "Lista os clientes cadastrados (razão social, CNPJ/CPF, contatos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "description": "Filtro por nome, razão social ou CNPJ."
+            },
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 200,
+              "description": "Máximo de registros (padrão 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_plans",
+        "title": "Listar planos",
+        "description": "Lista os planos disponíveis com nome, valor e descrição.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_client_plans",
+        "title": "Listar planos de clientes",
+        "description": "Lista os vínculos de planos com clientes (contratos ativos e inativos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "only_active": {
+              "type": "boolean",
+              "description": "Apenas contratos ativos."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_financial_records",
+        "title": "Listar registros financeiros",
+        "description": "Lista os registros financeiros (mensalidades) com filtros por status, cliente e intervalo de vencimento.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pendente",
+                "quitado",
+                "atrasado"
+              ],
+              "description": "Filtrar por status."
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID do cliente."
+            },
+            "due_from": {
+              "type": "string",
+              "description": "Data mínima de vencimento (YYYY-MM-DD)."
+            },
+            "due_to": {
+              "type": "string",
+              "description": "Data máxima de vencimento (YYYY-MM-DD)."
+            },
+            "limit": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 500
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "financial_summary",
+        "title": "Resumo financeiro",
+        "description": "Retorna totais de recebido, pendente e atrasado. Pode filtrar por intervalo de vencimento.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "due_from": {
+              "type": "string",
+              "description": "Data mínima de vencimento (YYYY-MM-DD)."
+            },
+            "due_to": {
+              "type": "string",
+              "description": "Data máxima de vencimento (YYYY-MM-DD)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
