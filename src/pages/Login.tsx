@@ -5,9 +5,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { useToast } from "@/hooks/use-toast"
+
+function sanitizeNext(next: string | null): string {
+  if (!next) return "/"
+  // Only allow same-origin relative paths
+  if (!next.startsWith("/") || next.startsWith("//")) return "/"
+  return next
+}
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
@@ -19,14 +26,16 @@ export default function Login() {
     recoveryData: ""
   })
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const next = sanitizeNext(params.get("next"))
   const { signIn, signUp, user } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
     if (user) {
-      navigate("/")
+      navigate(next)
     }
-  }, [user, navigate])
+  }, [user, navigate, next])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +44,7 @@ export default function Login() {
     const { error } = await signIn(formData.email, formData.password)
     
     if (!error) {
-      navigate("/")
+      navigate(next)
     }
     
     setIsLoading(false)
@@ -48,7 +57,7 @@ export default function Login() {
     const { error } = await signUp(formData.email, formData.password, formData.name)
     
     if (!error) {
-      navigate("/")
+      navigate(next)
     }
     
     setIsLoading(false)
