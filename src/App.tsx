@@ -14,6 +14,7 @@ import RemoteAccess from "./pages/RemoteAccess";
 import TechnicalReports from "./pages/TechnicalReports";
 import TechnicalReview from "./pages/TechnicalReview";
 import { AppLayout } from "./components/layout/AppLayout";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
